@@ -37,6 +37,7 @@ class BeforeAfterLayout extends StatefulWidget {
     this.afterLabel,
     this.overlay,
     this.zoomController,
+    this.fixedLabels = true,
   });
 
   /// The "before" widget to display.
@@ -81,6 +82,12 @@ class BeforeAfterLayout extends StatefulWidget {
 
   /// Controller for programmatic zoom/pan control.
   final ZoomController? zoomController;
+
+  /// Whether labels stay fixed on screen while content is zoomed/panned.
+  ///
+  /// If `true`, labels are rendered in a static overlay layer.
+  /// If `false`, labels are transformed together with compared content.
+  final bool fixedLabels;
 
   @override
   State<BeforeAfterLayout> createState() => _BeforeAfterLayoutState();
@@ -201,7 +208,7 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
               BeforeLabel(contentOrder: widget.contentOrder);
         }
 
-        // Content that will be zoomed (images, clip, labels)
+        // Content that will be zoomed.
         Widget zoomableContent = Stack(
           fit: StackFit.expand,
           children: [
@@ -214,15 +221,16 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
                 child: leftChild,
               ),
             ),
-            // Labels
-            Align(
-              alignment: Alignment.topLeft,
-              child: leftLabel,
-            ),
-            Align(
-              alignment: Alignment.topRight,
-              child: rightLabel,
-            ),
+            if (!widget.fixedLabels)
+              Align(
+                alignment: Alignment.topLeft,
+                child: leftLabel,
+              ),
+            if (!widget.fixedLabels)
+              Align(
+                alignment: Alignment.topRight,
+                child: rightLabel,
+              ),
           ],
         );
 
@@ -256,6 +264,16 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
               fit: StackFit.expand,
               children: [
                 zoomableContent,
+                if (widget.fixedLabels)
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: leftLabel,
+                  ),
+                if (widget.fixedLabels)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: rightLabel,
+                  ),
                 overlay,
               ],
             ),
