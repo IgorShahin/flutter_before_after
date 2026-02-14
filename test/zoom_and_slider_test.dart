@@ -388,6 +388,28 @@ void main() {
           closeTo(
               tester.getSize(find.byType(BeforeAfterLayout)).width * 0.8, 1));
     });
+
+    testWidgets('custom label widgets can be provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 300,
+              child: BeforeAfterLayout(
+                beforeChild: const ColoredBox(color: Colors.red),
+                afterChild: const ColoredBox(color: Colors.blue),
+                beforeLabelBuilder: (_) => const Text('My Before'),
+                afterLabelBuilder: (_) => const Text('My After'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('My Before'), findsOneWidget);
+      expect(find.text('My After'), findsOneWidget);
+    });
   });
 
   group('Coordinate transformation tests', () {

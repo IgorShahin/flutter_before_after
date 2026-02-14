@@ -35,6 +35,8 @@ class BeforeAfterLayout extends StatefulWidget {
     this.overlayStyle = const OverlayStyle(),
     this.beforeLabel,
     this.afterLabel,
+    this.beforeLabelBuilder,
+    this.afterLabelBuilder,
     this.overlay,
     this.zoomController,
     this.fixedLabels = true,
@@ -76,6 +78,16 @@ class BeforeAfterLayout extends StatefulWidget {
 
   /// Custom widget for the "after" label. If null, uses default [AfterLabel].
   final Widget? afterLabel;
+
+  /// Builder for the "before" label widget.
+  ///
+  /// Used when [beforeLabel] is null.
+  final Widget Function(BuildContext context)? beforeLabelBuilder;
+
+  /// Builder for the "after" label widget.
+  ///
+  /// Used when [afterLabel] is null.
+  final Widget Function(BuildContext context)? afterLabelBuilder;
 
   /// Custom overlay widget builder. If null, uses [DefaultOverlay].
   final Widget Function(Size size, Offset position)? overlay;
@@ -196,15 +208,19 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
           leftChild = widget.beforeChild;
           rightChild = widget.afterChild;
           leftLabel = widget.beforeLabel ??
+              widget.beforeLabelBuilder?.call(context) ??
               BeforeLabel(contentOrder: widget.contentOrder);
           rightLabel = widget.afterLabel ??
+              widget.afterLabelBuilder?.call(context) ??
               AfterLabel(contentOrder: widget.contentOrder);
         } else {
           leftChild = widget.afterChild;
           rightChild = widget.beforeChild;
           leftLabel = widget.afterLabel ??
+              widget.afterLabelBuilder?.call(context) ??
               AfterLabel(contentOrder: widget.contentOrder);
           rightLabel = widget.beforeLabel ??
+              widget.beforeLabelBuilder?.call(context) ??
               BeforeLabel(contentOrder: widget.contentOrder);
         }
 

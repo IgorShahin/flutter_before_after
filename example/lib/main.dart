@@ -43,6 +43,7 @@ class _HomePageState extends State<HomePage> {
         children: const [
           BeforeAfterImageDemo(),
           BeforeAfterLayoutDemo(),
+          LabelBuilderDemo(),
           CustomOverlayDemo(),
         ],
       ),
@@ -64,6 +65,10 @@ class _HomePageState extends State<HomePage> {
           ),
           NavigationDestination(
             icon: Icon(Icons.brush),
+            label: 'Labels',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_fix_high),
             label: 'Custom',
           ),
         ],
@@ -331,6 +336,109 @@ class BeforeAfterLayoutDemo extends StatelessWidget {
                   thumbIconColor: Colors.white,
                   thumbSize: 48,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Demo for custom label builders.
+class LabelBuilderDemo extends StatefulWidget {
+  const LabelBuilderDemo({super.key});
+
+  @override
+  State<LabelBuilderDemo> createState() => _LabelBuilderDemoState();
+}
+
+class _LabelBuilderDemoState extends State<LabelBuilderDemo> {
+  double _progress = 0.5;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Custom Label Builders',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: BeforeAfterImage(
+                beforeImage: const AssetImage('assets/before.png'),
+                afterImage: const AssetImage('assets/after.png'),
+                progress: _progress,
+                onProgressChanged: (value) => setState(() => _progress = value),
+                beforeLabelBuilder: (_) => Container(
+                  margin: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade600,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified, size: 16, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text(
+                        'Before',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                afterLabelBuilder: (_) => Container(
+                  margin: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade600,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text(
+                        'After',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'This demo uses beforeLabelBuilder and afterLabelBuilder to render fully custom widgets.',
               ),
             ),
           ),

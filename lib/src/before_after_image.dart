@@ -38,6 +38,8 @@ class BeforeAfterImage extends StatefulWidget {
     this.alignment = Alignment.center,
     this.beforeLabel,
     this.afterLabel,
+    this.beforeLabelBuilder,
+    this.afterLabelBuilder,
     this.overlay,
     this.zoomController,
     this.fixedLabels = true,
@@ -85,6 +87,16 @@ class BeforeAfterImage extends StatefulWidget {
 
   /// Custom widget for the "after" label. If null, uses default [AfterLabel].
   final Widget? afterLabel;
+
+  /// Builder for the "before" label widget.
+  ///
+  /// Used when [beforeLabel] is null.
+  final Widget Function(BuildContext context)? beforeLabelBuilder;
+
+  /// Builder for the "after" label widget.
+  ///
+  /// Used when [afterLabel] is null.
+  final Widget Function(BuildContext context)? afterLabelBuilder;
 
   /// Custom overlay widget builder. If null, uses [DefaultOverlay].
   /// The builder receives the size and current position.
@@ -208,15 +220,19 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
           leftImage = widget.beforeImage;
           rightImage = widget.afterImage;
           leftLabel = widget.beforeLabel ??
+              widget.beforeLabelBuilder?.call(context) ??
               BeforeLabel(contentOrder: widget.contentOrder);
           rightLabel = widget.afterLabel ??
+              widget.afterLabelBuilder?.call(context) ??
               AfterLabel(contentOrder: widget.contentOrder);
         } else {
           leftImage = widget.afterImage;
           rightImage = widget.beforeImage;
           leftLabel = widget.afterLabel ??
+              widget.afterLabelBuilder?.call(context) ??
               AfterLabel(contentOrder: widget.contentOrder);
           rightLabel = widget.beforeLabel ??
+              widget.beforeLabelBuilder?.call(context) ??
               BeforeLabel(contentOrder: widget.contentOrder);
         }
 
