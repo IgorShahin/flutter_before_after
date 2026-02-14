@@ -115,9 +115,8 @@ class BeforeAfterImage extends StatefulWidget {
   State<BeforeAfterImage> createState() => _BeforeAfterImageState();
 }
 
-class _BeforeAfterImageState extends State<BeforeAfterImage>
-    with SingleTickerProviderStateMixin {
-  late double _progress;
+class _BeforeAfterImageState extends State<BeforeAfterImage> {
+  late ValueNotifier<double> _progressNotifier;
   bool _isDragging = false;
   late ZoomController _zoomController;
   bool _ownsZoomController = false;
@@ -130,7 +129,7 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
   @override
   void initState() {
     super.initState();
-    _progress = widget.progress ?? 0.5;
+    _progressNotifier = ValueNotifier<double>(widget.progress ?? 0.5);
     _initZoomController();
   }
 
@@ -142,22 +141,16 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
       _zoomController = ZoomController();
       _ownsZoomController = true;
     }
-    _zoomController.addListener(_onZoomChanged);
-  }
-
-  void _onZoomChanged() {
-    setState(() {});
   }
 
   @override
   void didUpdateWidget(BeforeAfterImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.progress != null && widget.progress != _progress) {
-      _progress = widget.progress!;
+    if (widget.progress != null && widget.progress != _progressNotifier.value) {
+      _progressNotifier.value = widget.progress!;
     }
     if (widget.zoomController != oldWidget.zoomController) {
       if (_ownsZoomController) {
-        _zoomController.removeListener(_onZoomChanged);
         _zoomController.dispose();
       }
       _initZoomController();
@@ -166,7 +159,7 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
 
   @override
   void dispose() {
-    _zoomController.removeListener(_onZoomChanged);
+    _progressNotifier.dispose();
     if (_ownsZoomController) {
       _zoomController.dispose();
     }
@@ -176,13 +169,11 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
   void _updateProgress(double screenX, double width) {
     // Simple: screen X directly maps to progress (overlay is at fixed screen position)
     final newProgress = (screenX / width).clamp(0.0, 1.0);
-    setState(() {
-      _progress = newProgress;
-    });
+    _progressNotifier.value = newProgress;
     widget.onProgressChanged?.call(newProgress);
   }
 
-  bool _isOnDivider(Offset localPosition, double dividerScreenX, Size size) {
+  bool _isOnDivider(Offset localPosition, double dividerScreenX) {
     final thumbSize = widget.overlayStyle.thumbSize;
     final dividerWidth = widget.overlayStyle.dividerWidth;
     final hitHalfWidth =
@@ -204,119 +195,137 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final dividerScreenX = _progress * size.width;
-        final dividerContentX = _screenToContentX(
-          dividerScreenX,
-          size,
-        ).clamp(0.0, size.width);
+        return ValueListenableBuilder<double>(
+          valueListenable: _progressNotifier,
+          builder: (context, progress, _) {
+            final dividerScreenX = progress * size.width;
 
-        // Determine which image is on which side based on contentOrder
-        final ImageProvider leftImage;
-        final ImageProvider rightImage;
-        final Widget leftLabel;
-        final Widget rightLabel;
+            // Determine which image is on which side based on contentOrder
+            final ImageProvider leftImage;
+            final ImageProvider rightImage;
+            final Widget leftLabel;
+            final Widget rightLabel;
 
-        if (widget.contentOrder == ContentOrder.beforeAfter) {
-          leftImage = widget.beforeImage;
-          rightImage = widget.afterImage;
-          leftLabel = widget.beforeLabel ??
-              widget.beforeLabelBuilder?.call(context) ??
-              BeforeLabel(contentOrder: widget.contentOrder);
-          rightLabel = widget.afterLabel ??
-              widget.afterLabelBuilder?.call(context) ??
-              AfterLabel(contentOrder: widget.contentOrder);
-        } else {
-          leftImage = widget.afterImage;
-          rightImage = widget.beforeImage;
-          leftLabel = widget.afterLabel ??
-              widget.afterLabelBuilder?.call(context) ??
-              AfterLabel(contentOrder: widget.contentOrder);
-          rightLabel = widget.beforeLabel ??
-              widget.beforeLabelBuilder?.call(context) ??
-              BeforeLabel(contentOrder: widget.contentOrder);
-        }
+            if (widget.contentOrder == ContentOrder.beforeAfter) {
+              leftImage = widget.beforeImage;
+              rightImage = widget.afterImage;
+              leftLabel = widget.beforeLabel ??
+                  widget.beforeLabelBuilder?.call(context) ??
+                  BeforeLabel(contentOrder: widget.contentOrder);
+              rightLabel = widget.afterLabel ??
+                  widget.afterLabelBuilder?.call(context) ??
+                  AfterLabel(contentOrder: widget.contentOrder);
+            } else {
+              leftImage = widget.afterImage;
+              rightImage = widget.beforeImage;
+              leftLabel = widget.afterLabel ??
+                  widget.afterLabelBuilder?.call(context) ??
+                  AfterLabel(contentOrder: widget.contentOrder);
+              rightLabel = widget.beforeLabel ??
+                  widget.beforeLabelBuilder?.call(context) ??
+                  BeforeLabel(contentOrder: widget.contentOrder);
+            }
 
-        // Content that will be zoomed.
-        Widget zoomableContent = Stack(
-          fit: StackFit.expand,
-          children: [
-            // Right/After image (full, behind)
-            Positioned.fill(
-              child: Image(
-                image: rightImage,
-                fit: widget.fit,
-                alignment: widget.alignment,
-              ),
-            ),
-            // Left/Before image (clipped)
-            Positioned.fill(
+            Widget buildZoomableContent(double dividerContentX) {
+              Widget content = RepaintBoundary(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Right/After image (full, behind)
+                    Positioned.fill(
+                      child: Image(
+                        image: rightImage,
+                        fit: widget.fit,
+                        alignment: widget.alignment,
+                      ),
+                    ),
+                    // Left/Before image (clipped)
+                    Positioned.fill(
+                      child: ClipRect(
+                        clipper: _LeftClipper(dividerContentX),
+                        child: Image(
+                          image: leftImage,
+                          fit: widget.fit,
+                          alignment: widget.alignment,
+                        ),
+                      ),
+                    ),
+                    if (!widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: leftLabel,
+                      ),
+                    if (!widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: rightLabel,
+                      ),
+                  ],
+                ),
+              );
+
+              if (widget.enableZoom) {
+                content = Transform(
+                  transform: _zoomController.transformationMatrix,
+                  alignment: Alignment.center,
+                  child: content,
+                );
+              }
+
+              return content;
+            }
+
+            final zoomableContent = widget.enableZoom
+                ? AnimatedBuilder(
+                    animation: _zoomController,
+                    builder: (context, child) {
+                      final dividerContentX = _screenToContentX(
+                        dividerScreenX,
+                        size,
+                      ).clamp(0.0, size.width);
+                      return buildZoomableContent(dividerContentX);
+                    },
+                  )
+                : buildZoomableContent(dividerScreenX);
+
+            // Overlay at FIXED screen position (does not move with zoom/pan)
+            final overlayPosition = Offset(dividerScreenX, size.height / 2);
+
+            final overlay = widget.overlay?.call(size, overlayPosition) ??
+                DefaultOverlay(
+                  width: size.width,
+                  height: size.height,
+                  position: overlayPosition,
+                  style: widget.overlayStyle,
+                );
+
+            // Gesture handling
+            return GestureDetector(
+              onScaleStart: _onScaleStart,
+              onScaleUpdate: (details) => _onScaleUpdate(details, size),
+              onScaleEnd: _onScaleEnd,
+              onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
               child: ClipRect(
-                clipper: _LeftClipper(dividerContentX),
-                child: Image(
-                  image: leftImage,
-                  fit: widget.fit,
-                  alignment: widget.alignment,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    zoomableContent,
+                    if (widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: leftLabel,
+                      ),
+                    if (widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: rightLabel,
+                      ),
+                    RepaintBoundary(child: overlay),
+                  ],
                 ),
               ),
-            ),
-            if (!widget.fixedLabels)
-              Align(
-                alignment: Alignment.topLeft,
-                child: leftLabel,
-              ),
-            if (!widget.fixedLabels)
-              Align(
-                alignment: Alignment.topRight,
-                child: rightLabel,
-              ),
-          ],
-        );
-
-        // Apply zoom transformation only to zoomable content
-        if (widget.enableZoom) {
-          zoomableContent = Transform(
-            transform: _zoomController.transformationMatrix,
-            alignment: Alignment.center,
-            child: zoomableContent,
-          );
-        }
-
-        // Overlay at FIXED screen position (does not move with zoom/pan)
-        final overlayPosition = Offset(dividerScreenX, size.height / 2);
-
-        final overlay = widget.overlay?.call(size, overlayPosition) ??
-            DefaultOverlay(
-              width: size.width,
-              height: size.height,
-              position: overlayPosition,
-              style: widget.overlayStyle,
             );
-
-        // Gesture handling
-        return GestureDetector(
-          onScaleStart: _onScaleStart,
-          onScaleUpdate: (details) => _onScaleUpdate(details, size),
-          onScaleEnd: _onScaleEnd,
-          onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
-          child: ClipRect(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                zoomableContent,
-                if (widget.fixedLabels)
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: leftLabel,
-                  ),
-                if (widget.fixedLabels)
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: rightLabel,
-                  ),
-                overlay,
-              ],
-            ),
-          ),
+          },
         );
       },
     );
@@ -331,11 +340,11 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
       final size = context.size;
       if (size != null) {
         // Overlay is at fixed screen position: progress * width
-        final dividerScreenX = _progress * size.width;
+        final dividerScreenX = _progressNotifier.value * size.width;
 
-        if (_isOnDivider(details.localFocalPoint, dividerScreenX, size)) {
+        if (_isOnDivider(details.localFocalPoint, dividerScreenX)) {
           _isDragging = true;
-          widget.onProgressStart?.call(_progress);
+          widget.onProgressStart?.call(_progressNotifier.value);
         }
       }
     }
@@ -391,7 +400,7 @@ class _BeforeAfterImageState extends State<BeforeAfterImage>
 
   void _onScaleEnd(ScaleEndDetails details) {
     if (_isDragging) {
-      widget.onProgressEnd?.call(_progress);
+      widget.onProgressEnd?.call(_progressNotifier.value);
       _isDragging = false;
     }
     _lastFocalPoint = null;

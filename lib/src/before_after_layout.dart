@@ -106,7 +106,7 @@ class BeforeAfterLayout extends StatefulWidget {
 }
 
 class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
-  late double _progress;
+  late ValueNotifier<double> _progressNotifier;
   bool _isDragging = false;
   late ZoomController _zoomController;
   bool _ownsZoomController = false;
@@ -118,7 +118,7 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
   @override
   void initState() {
     super.initState();
-    _progress = widget.progress ?? 0.5;
+    _progressNotifier = ValueNotifier<double>(widget.progress ?? 0.5);
     _initZoomController();
   }
 
@@ -130,22 +130,16 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
       _zoomController = ZoomController();
       _ownsZoomController = true;
     }
-    _zoomController.addListener(_onZoomChanged);
-  }
-
-  void _onZoomChanged() {
-    setState(() {});
   }
 
   @override
   void didUpdateWidget(BeforeAfterLayout oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.progress != null && widget.progress != _progress) {
-      _progress = widget.progress!;
+    if (widget.progress != null && widget.progress != _progressNotifier.value) {
+      _progressNotifier.value = widget.progress!;
     }
     if (widget.zoomController != oldWidget.zoomController) {
       if (_ownsZoomController) {
-        _zoomController.removeListener(_onZoomChanged);
         _zoomController.dispose();
       }
       _initZoomController();
@@ -154,7 +148,7 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
 
   @override
   void dispose() {
-    _zoomController.removeListener(_onZoomChanged);
+    _progressNotifier.dispose();
     if (_ownsZoomController) {
       _zoomController.dispose();
     }
@@ -164,13 +158,11 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
   void _updateProgress(double screenX, double width) {
     // Simple: screen X directly maps to progress (overlay is at fixed screen position)
     final newProgress = (screenX / width).clamp(0.0, 1.0);
-    setState(() {
-      _progress = newProgress;
-    });
+    _progressNotifier.value = newProgress;
     widget.onProgressChanged?.call(newProgress);
   }
 
-  bool _isOnDivider(Offset localPosition, double dividerScreenX, Size size) {
+  bool _isOnDivider(Offset localPosition, double dividerScreenX) {
     final thumbSize = widget.overlayStyle.thumbSize;
     final dividerWidth = widget.overlayStyle.dividerWidth;
     final hitHalfWidth =
@@ -192,108 +184,126 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final dividerScreenX = _progress * size.width;
-        final dividerContentX = _screenToContentX(
-          dividerScreenX,
-          size,
-        ).clamp(0.0, size.width);
+        return ValueListenableBuilder<double>(
+          valueListenable: _progressNotifier,
+          builder: (context, progress, _) {
+            final dividerScreenX = progress * size.width;
 
-        // Determine which child is on which side based on contentOrder
-        final Widget leftChild;
-        final Widget rightChild;
-        final Widget leftLabel;
-        final Widget rightLabel;
+            // Determine which child is on which side based on contentOrder
+            final Widget leftChild;
+            final Widget rightChild;
+            final Widget leftLabel;
+            final Widget rightLabel;
 
-        if (widget.contentOrder == ContentOrder.beforeAfter) {
-          leftChild = widget.beforeChild;
-          rightChild = widget.afterChild;
-          leftLabel = widget.beforeLabel ??
-              widget.beforeLabelBuilder?.call(context) ??
-              BeforeLabel(contentOrder: widget.contentOrder);
-          rightLabel = widget.afterLabel ??
-              widget.afterLabelBuilder?.call(context) ??
-              AfterLabel(contentOrder: widget.contentOrder);
-        } else {
-          leftChild = widget.afterChild;
-          rightChild = widget.beforeChild;
-          leftLabel = widget.afterLabel ??
-              widget.afterLabelBuilder?.call(context) ??
-              AfterLabel(contentOrder: widget.contentOrder);
-          rightLabel = widget.beforeLabel ??
-              widget.beforeLabelBuilder?.call(context) ??
-              BeforeLabel(contentOrder: widget.contentOrder);
-        }
+            if (widget.contentOrder == ContentOrder.beforeAfter) {
+              leftChild = widget.beforeChild;
+              rightChild = widget.afterChild;
+              leftLabel = widget.beforeLabel ??
+                  widget.beforeLabelBuilder?.call(context) ??
+                  BeforeLabel(contentOrder: widget.contentOrder);
+              rightLabel = widget.afterLabel ??
+                  widget.afterLabelBuilder?.call(context) ??
+                  AfterLabel(contentOrder: widget.contentOrder);
+            } else {
+              leftChild = widget.afterChild;
+              rightChild = widget.beforeChild;
+              leftLabel = widget.afterLabel ??
+                  widget.afterLabelBuilder?.call(context) ??
+                  AfterLabel(contentOrder: widget.contentOrder);
+              rightLabel = widget.beforeLabel ??
+                  widget.beforeLabelBuilder?.call(context) ??
+                  BeforeLabel(contentOrder: widget.contentOrder);
+            }
 
-        // Content that will be zoomed.
-        Widget zoomableContent = Stack(
-          fit: StackFit.expand,
-          children: [
-            // Right/After child (full, behind)
-            Positioned.fill(child: rightChild),
-            // Left/Before child (clipped)
-            Positioned.fill(
-              child: ClipPath(
-                clipper: _LeftPathClipper(dividerContentX),
-                child: leftChild,
+            Widget buildZoomableContent(double dividerContentX) {
+              Widget content = RepaintBoundary(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Right/After child (full, behind)
+                    Positioned.fill(child: rightChild),
+                    // Left/Before child (clipped)
+                    Positioned.fill(
+                      child: ClipRect(
+                        clipper: _LeftRectClipper(dividerContentX),
+                        child: leftChild,
+                      ),
+                    ),
+                    if (!widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: leftLabel,
+                      ),
+                    if (!widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: rightLabel,
+                      ),
+                  ],
+                ),
+              );
+
+              if (widget.enableZoom) {
+                content = Transform(
+                  transform: _zoomController.transformationMatrix,
+                  alignment: Alignment.center,
+                  child: content,
+                );
+              }
+
+              return content;
+            }
+
+            final zoomableContent = widget.enableZoom
+                ? AnimatedBuilder(
+                    animation: _zoomController,
+                    builder: (context, child) {
+                      final dividerContentX = _screenToContentX(
+                        dividerScreenX,
+                        size,
+                      ).clamp(0.0, size.width);
+                      return buildZoomableContent(dividerContentX);
+                    },
+                  )
+                : buildZoomableContent(dividerScreenX);
+
+            // Overlay at FIXED screen position (does not move with zoom/pan)
+            final overlayPosition = Offset(dividerScreenX, size.height / 2);
+
+            final overlay = widget.overlay?.call(size, overlayPosition) ??
+                DefaultOverlay(
+                  width: size.width,
+                  height: size.height,
+                  position: overlayPosition,
+                  style: widget.overlayStyle,
+                );
+
+            return GestureDetector(
+              onScaleStart: _onScaleStart,
+              onScaleUpdate: (details) => _onScaleUpdate(details, size),
+              onScaleEnd: _onScaleEnd,
+              onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
+              child: ClipRect(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    zoomableContent,
+                    if (widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: leftLabel,
+                      ),
+                    if (widget.fixedLabels)
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: rightLabel,
+                      ),
+                    RepaintBoundary(child: overlay),
+                  ],
+                ),
               ),
-            ),
-            if (!widget.fixedLabels)
-              Align(
-                alignment: Alignment.topLeft,
-                child: leftLabel,
-              ),
-            if (!widget.fixedLabels)
-              Align(
-                alignment: Alignment.topRight,
-                child: rightLabel,
-              ),
-          ],
-        );
-
-        // Apply zoom transformation only to zoomable content
-        if (widget.enableZoom) {
-          zoomableContent = Transform(
-            transform: _zoomController.transformationMatrix,
-            alignment: Alignment.center,
-            child: zoomableContent,
-          );
-        }
-
-        // Overlay at FIXED screen position (does not move with zoom/pan)
-        final overlayPosition = Offset(dividerScreenX, size.height / 2);
-
-        final overlay = widget.overlay?.call(size, overlayPosition) ??
-            DefaultOverlay(
-              width: size.width,
-              height: size.height,
-              position: overlayPosition,
-              style: widget.overlayStyle,
             );
-
-        return GestureDetector(
-          onScaleStart: _onScaleStart,
-          onScaleUpdate: (details) => _onScaleUpdate(details, size),
-          onScaleEnd: _onScaleEnd,
-          onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
-          child: ClipRect(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                zoomableContent,
-                if (widget.fixedLabels)
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: leftLabel,
-                  ),
-                if (widget.fixedLabels)
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: rightLabel,
-                  ),
-                overlay,
-              ],
-            ),
-          ),
+          },
         );
       },
     );
@@ -308,11 +318,11 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
       final size = context.size;
       if (size != null) {
         // Overlay is at fixed screen position: progress * width
-        final dividerScreenX = _progress * size.width;
+        final dividerScreenX = _progressNotifier.value * size.width;
 
-        if (_isOnDivider(details.localFocalPoint, dividerScreenX, size)) {
+        if (_isOnDivider(details.localFocalPoint, dividerScreenX)) {
           _isDragging = true;
-          widget.onProgressStart?.call(_progress);
+          widget.onProgressStart?.call(_progressNotifier.value);
         }
       }
     }
@@ -369,7 +379,7 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
 
   void _onScaleEnd(ScaleEndDetails details) {
     if (_isDragging) {
-      widget.onProgressEnd?.call(_progress);
+      widget.onProgressEnd?.call(_progressNotifier.value);
       _isDragging = false;
     }
     _lastFocalPoint = null;
@@ -382,19 +392,19 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
   }
 }
 
-/// Custom clipper that clips content to the left of a vertical line using a Path.
-class _LeftPathClipper extends CustomClipper<Path> {
-  _LeftPathClipper(this.dividerX);
+/// Custom clipper that clips content to the left of a vertical line.
+class _LeftRectClipper extends CustomClipper<Rect> {
+  _LeftRectClipper(this.dividerX);
 
   final double dividerX;
 
   @override
-  Path getClip(Size size) {
-    return Path()..addRect(Rect.fromLTRB(0, 0, dividerX, size.height));
+  Rect getClip(Size size) {
+    return Rect.fromLTRB(0, 0, dividerX, size.height);
   }
 
   @override
-  bool shouldReclip(_LeftPathClipper oldClipper) {
+  bool shouldReclip(_LeftRectClipper oldClipper) {
     return dividerX != oldClipper.dividerX;
   }
 }
