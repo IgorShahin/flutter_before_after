@@ -1,7 +1,15 @@
 name: flutter_before_after
-description: A Flutter package for creating interactive before/after image comparison widgets with drag, zoom, and pan gestures.
+description: Compare before/after images or widgets with a smooth draggable divider, pinch zoom, pan, and customizable overlay UI.
 version: 1.0.0
-homepage: https://github.com/SmartToolFactory/Compose-BeforeAfter
+homepage: https://github.com/IgorShahin/flutter_before_after
+repository: https://github.com/IgorShahin/flutter_before_after
+issue_tracker: https://github.com/IgorShahin/flutter_before_after/issues
+topics:
+  - image-comparison
+  - before-after
+  - slider
+  - zoom
+  - pan
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
