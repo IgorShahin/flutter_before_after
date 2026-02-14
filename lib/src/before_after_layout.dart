@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'content_order.dart';
@@ -151,14 +153,11 @@ class _BeforeAfterLayoutState extends State<BeforeAfterLayout> {
 
   bool _isOnDivider(Offset localPosition, double dividerScreenX, Size size) {
     final thumbSize = widget.overlayStyle.thumbSize;
-    final thumbY =
-        size.height * (widget.overlayStyle.thumbPositionPercent / 100.0);
-
+    final dividerWidth = widget.overlayStyle.dividerWidth;
+    final hitHalfWidth =
+        math.max(thumbSize / 2, math.max(dividerWidth * 2, 12));
     final dx = (localPosition.dx - dividerScreenX).abs();
-    final dy = (localPosition.dy - thumbY).abs();
-
-    // Check if within thumb circle
-    return (dx * dx + dy * dy) < (thumbSize * thumbSize);
+    return dx <= hitHalfWidth;
   }
 
   double _screenToContentX(double screenX, Size size) {
