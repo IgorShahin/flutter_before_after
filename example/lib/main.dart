@@ -121,9 +121,15 @@ class _BeforeAfterImageDemoState extends State<BeforeAfterImageDemo> {
                 borderRadius: BorderRadius.circular(12),
               ),
               clipBehavior: Clip.antiAlias,
-              child: BeforeAfterImage(
-                beforeImage: const AssetImage('assets/before.png'),
-                afterImage: const AssetImage('assets/after.png'),
+              child: BeforeAfter(
+                beforeChild: Image(
+                  image: AssetImage('assets/before.png'),
+                  fit: _fit,
+                ),
+                afterChild: Image(
+                  image: AssetImage('assets/after.png'),
+                  fit: _fit,
+                ),
                 progress: _progress,
                 onProgressChanged: (value) {
                   setState(() {
@@ -131,7 +137,6 @@ class _BeforeAfterImageDemoState extends State<BeforeAfterImageDemo> {
                   });
                 },
                 contentOrder: _contentOrder,
-                fit: _fit,
                 zoomController: _zoomController,
                 overlayStyle: const OverlayStyle(
                   dividerColor: Colors.white,
@@ -284,7 +289,7 @@ class BeforeAfterLayoutDemo extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               clipBehavior: Clip.antiAlias,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: Container(
                   color: Colors.blue.shade100,
                   child: const Center(
@@ -375,9 +380,13 @@ class _LabelBuilderDemoState extends State<LabelBuilderDemo> {
                 borderRadius: BorderRadius.circular(12),
               ),
               clipBehavior: Clip.antiAlias,
-              child: BeforeAfterImage(
-                beforeImage: const AssetImage('assets/before.png'),
-                afterImage: const AssetImage('assets/after.png'),
+              child: BeforeAfter(
+                beforeChild: const Image(
+                  image: AssetImage('assets/before.png'),
+                ),
+                afterChild: const Image(
+                  image: AssetImage('assets/after.png'),
+                ),
                 progress: _progress,
                 onProgressChanged: (value) => setState(() => _progress = value),
                 beforeLabelBuilder: (_) => Container(
@@ -478,9 +487,13 @@ class _CustomOverlayDemoState extends State<CustomOverlayDemo> {
                 borderRadius: BorderRadius.circular(12),
               ),
               clipBehavior: Clip.antiAlias,
-              child: BeforeAfterImage(
-                beforeImage: const AssetImage('assets/before_alt.png'),
-                afterImage: const AssetImage('assets/after_alt.png'),
+              child: BeforeAfter(
+                beforeChild: const Image(
+                  image: AssetImage('assets/before_alt.png'),
+                ),
+                afterChild: const Image(
+                  image: AssetImage('assets/after_alt.png'),
+                ),
                 progress: _progress,
                 onProgressChanged: (value) {
                   setState(() {

@@ -8,8 +8,8 @@ any side-by-side state comparison UI.
 
 ## Features
 
-- Compare two images with `BeforeAfterImage`
-- Compare any two widgets with `BeforeAfterLayout`
+- Compare two images with `BeforeAfter`
+- Compare any two widgets with `BeforeAfter`
 - Smooth drag gesture and full divider-line hit area
 - Pinch-to-zoom and pan gestures
 - Double-tap to reset zoom
@@ -29,7 +29,7 @@ any side-by-side state comparison UI.
 
 ```yaml
 dependencies:
-  before_after_slider: ^1.0.0
+  before_after_slider: ^2.0.0
 ```
 
 ```bash
@@ -41,9 +41,9 @@ flutter pub get
 ```dart
 import 'package:before_after_slider/before_after_slider.dart';
 
-BeforeAfterImage(
-  beforeImage: const AssetImage('assets/before.jpg'),
-  afterImage: const AssetImage('assets/after.jpg'),
+BeforeAfter(
+  beforeChild: const Image(image: AssetImage('assets/before.jpg')),
+  afterChild: const Image(image: AssetImage('assets/after.jpg')),
 )
 ```
 
@@ -52,9 +52,17 @@ BeforeAfterImage(
 ### Image Comparison
 
 ```dart
-BeforeAfterImage(
-  beforeImage: const AssetImage('assets/before.jpg'),
-  afterImage: const AssetImage('assets/after.jpg'),
+BeforeAfter(
+  beforeChild: const Image(
+    image: AssetImage('assets/before.jpg'),
+    fit: BoxFit.contain,
+    alignment: Alignment.center,
+  ),
+  afterChild: const Image(
+    image: AssetImage('assets/after.jpg'),
+    fit: BoxFit.contain,
+    alignment: Alignment.center,
+  ),
   progress: 0.5,
   enableZoom: true,
   fixedLabels: true,
@@ -71,7 +79,7 @@ BeforeAfterImage(
 ### Widget Comparison
 
 ```dart
-BeforeAfterLayout(
+BeforeAfter(
   beforeChild: Container(color: const Color(0xFFDCEBFF)),
   afterChild: Container(color: const Color(0xFFFFECD8)),
   enableZoom: true,
@@ -84,9 +92,9 @@ BeforeAfterLayout(
 ```dart
 final controller = ZoomController();
 
-BeforeAfterImage(
-  beforeImage: const AssetImage('assets/before.jpg'),
-  afterImage: const AssetImage('assets/after.jpg'),
+BeforeAfter(
+  beforeChild: const Image(image: AssetImage('assets/before.jpg')),
+  afterChild: const Image(image: AssetImage('assets/after.jpg')),
   zoomController: controller,
 );
 
@@ -98,7 +106,7 @@ controller.reset();
 
 ### Core Widgets
 
-`BeforeAfterImage` and `BeforeAfterLayout` support:
+`BeforeAfter` supports:
 
 - `progress` (controlled mode)
 - `onProgressChanged`, `onProgressStart`, `onProgressEnd`
@@ -117,6 +125,42 @@ controller.reset();
   Labels stay in static screen positions while content zooms/pans.
 - `fixedLabels: false`  
   Labels transform together with compared content.
+
+## Migration From 1.x
+
+`2.0.0` contains a breaking API change.
+
+- Removed: `BeforeAfterImage`
+- Removed: `BeforeAfterLayout`
+- Use: `BeforeAfter(beforeChild: ..., afterChild: ...)`
+
+### Before (1.x)
+
+```dart
+BeforeAfterImage(
+  beforeImage: const AssetImage('assets/before.jpg'),
+  afterImage: const AssetImage('assets/after.jpg'),
+)
+
+BeforeAfterLayout(
+  beforeChild: Container(color: Colors.red),
+  afterChild: Container(color: Colors.blue),
+)
+```
+
+### After (2.x)
+
+```dart
+BeforeAfter(
+  beforeChild: const Image(image: AssetImage('assets/before.jpg')),
+  afterChild: const Image(image: AssetImage('assets/after.jpg')),
+)
+
+BeforeAfter(
+  beforeChild: Container(color: Colors.red),
+  afterChild: Container(color: Colors.blue),
+)
+```
 
 ## Example App
 

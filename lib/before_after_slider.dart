@@ -6,7 +6,7 @@
 /// ## Features
 ///
 /// - Compare images with drag-to-reveal interaction
-/// - Compare any widgets using [BeforeAfterLayout]
+/// - Compare any widgets using [BeforeAfter]
 /// - Pinch-to-zoom and pan support
 /// - Double-tap to reset zoom
 /// - Customizable overlay (divider line and thumb)
@@ -19,21 +19,20 @@
 /// import 'package:before_after_slider/before_after_slider.dart';
 ///
 /// // Compare two images
-/// BeforeAfterImage(
-///   beforeImage: AssetImage('assets/before.jpg'),
-///   afterImage: AssetImage('assets/after.jpg'),
+/// BeforeAfter(
+///   beforeChild: Image(image: AssetImage('assets/before.jpg')),
+///   afterChild: Image(image: AssetImage('assets/after.jpg')),
 /// )
 ///
 /// // Compare any widgets
-/// BeforeAfterLayout(
+/// BeforeAfter(
 ///   beforeChild: Container(color: Colors.red),
 ///   afterChild: Container(color: Colors.blue),
 /// )
 /// ```
 library;
 
-export 'src/before_after_image.dart';
-export 'src/before_after_layout.dart';
+export 'src/before_after.dart';
 export 'src/content_order.dart';
 export 'src/default_overlay.dart';
 export 'src/labels.dart';

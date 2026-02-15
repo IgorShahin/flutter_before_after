@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Controller for managing zoom, pan, and rotation state.
 ///
 /// Use this controller to programmatically control the zoom state
-/// of [BeforeAfterImage] or [BeforeAfterLayout] widgets.
+/// of [BeforeAfter] widget.
 class ZoomController extends ChangeNotifier {
   /// Creates a zoom controller with the given initial values.
   ZoomController({
@@ -99,8 +99,10 @@ class ZoomController extends ChangeNotifier {
       var newPan = _pan + panDelta;
 
       if (boundPan) {
-        final maxX = (containerSize.width * (_zoom - 1) / 2).clamp(0.0, double.infinity);
-        final maxY = (containerSize.height * (_zoom - 1) / 2).clamp(0.0, double.infinity);
+        final maxX =
+            (containerSize.width * (_zoom - 1) / 2).clamp(0.0, double.infinity);
+        final maxY = (containerSize.height * (_zoom - 1) / 2)
+            .clamp(0.0, double.infinity);
         newPan = Offset(
           newPan.dx.clamp(-maxX, maxX),
           newPan.dy.clamp(-maxY, maxY),

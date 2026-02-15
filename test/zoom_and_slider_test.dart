@@ -174,7 +174,7 @@ void main() {
     });
   });
 
-  group('BeforeAfterLayout widget tests', () {
+  group('BeforeAfter widget tests', () {
     testWidgets('renders before and after children', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -182,7 +182,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: ColoredBox(color: Colors.red),
                 afterChild: ColoredBox(color: Colors.blue),
               ),
@@ -191,7 +191,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(BeforeAfterLayout), findsOneWidget);
+      expect(find.byType(BeforeAfter), findsOneWidget);
       expect(find.byType(DefaultOverlay), findsOneWidget);
     });
 
@@ -204,7 +204,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: zoomController,
@@ -232,7 +232,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: zoomController,
@@ -245,9 +245,9 @@ void main() {
       expect(zoomController.zoom, 2.0);
 
       // Double tap using tester.doubleTap
-      await tester.tap(find.byType(BeforeAfterLayout));
+      await tester.tap(find.byType(BeforeAfter));
       await tester.pump(const Duration(milliseconds: 50));
-      await tester.tap(find.byType(BeforeAfterLayout));
+      await tester.tap(find.byType(BeforeAfter));
       await tester.pumpAndSettle();
 
       expect(zoomController.zoom, 1.0);
@@ -265,7 +265,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: zoomController,
@@ -314,7 +314,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: zoomController,
@@ -349,7 +349,7 @@ void main() {
                 body: Column(
                   children: [
                     Expanded(
-                      child: BeforeAfterLayout(
+                      child: BeforeAfter(
                         beforeChild: const ColoredBox(color: Colors.red),
                         afterChild: const ColoredBox(color: Colors.blue),
                         progress: progress,
@@ -372,10 +372,8 @@ void main() {
 
       // Initial position at 50%
       var overlay = tester.widget<DefaultOverlay>(find.byType(DefaultOverlay));
-      expect(
-          overlay.position.dx,
-          closeTo(
-              tester.getSize(find.byType(BeforeAfterLayout)).width * 0.5, 1));
+      expect(overlay.position.dx,
+          closeTo(tester.getSize(find.byType(BeforeAfter)).width * 0.5, 1));
 
       // Tap button to change progress
       await tester.tap(find.text('Set 80%'));
@@ -383,10 +381,8 @@ void main() {
 
       // Position should now be at 80%
       overlay = tester.widget<DefaultOverlay>(find.byType(DefaultOverlay));
-      expect(
-          overlay.position.dx,
-          closeTo(
-              tester.getSize(find.byType(BeforeAfterLayout)).width * 0.8, 1));
+      expect(overlay.position.dx,
+          closeTo(tester.getSize(find.byType(BeforeAfter)).width * 0.8, 1));
     });
 
     testWidgets('custom label widgets can be provided', (tester) async {
@@ -396,7 +392,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BeforeAfterLayout(
+              child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 beforeLabelBuilder: (_) => const Text('My Before'),

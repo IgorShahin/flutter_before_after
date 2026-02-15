@@ -1,6 +1,6 @@
 name: before_after_slider
 description: Compare before/after images or widgets with a smooth draggable divider, pinch zoom, pan, and customizable overlay UI.
-version: 1.1.0
+version: 2.0.0
 homepage: https://github.com/IgorShahin/before_after_slider
 repository: https://github.com/IgorShahin/before_after_slider
 issue_tracker: https://github.com/IgorShahin/before_after_slider/issues
