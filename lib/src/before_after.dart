@@ -157,20 +157,9 @@ class _BeforeAfterState extends State<BeforeAfter> {
   double? _lastScale;
   int _lastPointerCount = 0;
   double _lastTrackpadScale = 1.0;
+  bool _isPrimaryPointerDown = false;
 
   double _containerVisualScaleTarget = 1.0;
-
-  _ResolvedDesktopZoom get _desktopZoom => _ResolvedDesktopZoom(
-        enabled: widget.desktopZoom.enabled,
-        requiresModifier: widget.desktopZoom.requiresModifier,
-        sensitivity: widget.desktopZoom.sensitivity,
-        smoothing: widget.desktopZoom.smoothing,
-        mouseSensitivityMultiplier:
-            widget.desktopZoom.mouseSensitivityMultiplier,
-        mouseMinStep: widget.desktopZoom.mouseMinStep,
-        panToZoomSensitivity: widget.desktopZoom.panToZoomSensitivity,
-        panToZoomMinStep: widget.desktopZoom.panToZoomMinStep,
-      );
 
   @override
   void initState() {
@@ -258,6 +247,9 @@ class _BeforeAfterState extends State<BeforeAfter> {
                   onScaleEnd: _onScaleEnd,
                   onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
                   child: Listener(
+                    onPointerDown: _onPointerDown,
+                    onPointerUp: _onPointerUp,
+                    onPointerCancel: _onPointerCancel,
                     onPointerSignal: (event) =>
                         _onPointerSignal(event, fullSize),
                     onPointerPanZoomStart: _onPointerPanZoomStart,
@@ -317,8 +309,10 @@ class _BeforeAfterState extends State<BeforeAfter> {
     final visual = _visualGeometry(fullSize, visualScale);
     final localX = screenX - visual.offsetX;
     final next = (localX / visual.width).clamp(0.0, 1.0);
-    _progressNotifier.value = next;
-    widget.onProgressChanged?.call(next);
+    if ((_progressNotifier.value - next).abs() > 0.0005) {
+      _progressNotifier.value = next;
+      widget.onProgressChanged?.call(next);
+    }
   }
 
   bool _canStartSliderDrag(
@@ -413,6 +407,10 @@ class _BeforeAfterState extends State<BeforeAfter> {
     if (widget.enableZoom &&
         _zoomController.zoom > 1.0 &&
         details.pointerCount == 1) {
+      if (_isDesktopLike && !_isPrimaryPointerDown) {
+        _lastPointerCount = details.pointerCount;
+        return;
+      }
       _handlePanUpdate(details, fullSize);
       return;
     }
@@ -487,40 +485,67 @@ class _BeforeAfterState extends State<BeforeAfter> {
   }
 
   void _onPointerSignal(PointerSignalEvent event, Size fullSize) {
-    if (!widget.enableZoom || !_desktopZoom.enabled) return;
+    final desktopZoom = widget.desktopZoom;
+    if (!widget.enableZoom || !desktopZoom.enabled) return;
     if (event is! PointerScrollEvent) return;
 
-    final isLikelyMouse = event.kind == PointerDeviceKind.mouse ||
-        event.kind == PointerDeviceKind.unknown;
-    if (_desktopZoom.requiresModifier &&
-        !_isZoomModifierPressed() &&
-        !isLikelyMouse) {
+    if (desktopZoom.requiresModifier && !_isZoomModifierPressed()) {
       return;
     }
 
-    final axisDelta = event.scrollDelta.dy.abs() >= event.scrollDelta.dx.abs()
-        ? event.scrollDelta.dy
-        : event.scrollDelta.dx;
-    if (axisDelta == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(
+      event,
+      (resolvedEvent) {
+        final scrollEvent = resolvedEvent as PointerScrollEvent;
+        final isLikelyMouse = scrollEvent.kind == PointerDeviceKind.mouse ||
+            scrollEvent.kind == PointerDeviceKind.unknown;
+        final axisDelta =
+            scrollEvent.scrollDelta.dy.abs() >= scrollEvent.scrollDelta.dx.abs()
+                ? scrollEvent.scrollDelta.dy
+                : scrollEvent.scrollDelta.dx;
+        if (axisDelta == 0) return;
 
-    final effectiveDelta = axisDelta.sign *
-        math.max(
-            axisDelta.abs(), isLikelyMouse ? _desktopZoom.mouseMinStep : 1.0);
-    final sensitivity = isLikelyMouse
-        ? _desktopZoom.sensitivity * _desktopZoom.mouseSensitivityMultiplier
-        : _desktopZoom.sensitivity;
+        final effectiveDelta = axisDelta.sign *
+            math.max(
+              axisDelta.abs(),
+              isLikelyMouse ? desktopZoom.mouseMinStep : 1.0,
+            );
+        final sensitivity = isLikelyMouse
+            ? desktopZoom.sensitivity * desktopZoom.mouseSensitivityMultiplier
+            : desktopZoom.sensitivity;
 
-    final factor = math.exp(-effectiveDelta * sensitivity);
-    _zoomController.applyDesktopZoomPan(
-      containerSize: fullSize,
-      focalPoint: event.localPosition,
-      zoomScaleFactor: factor,
-      panDelta: Offset.zero,
-      allowOvershoot: false,
-      smoothing: _desktopZoom.smoothing,
+        final factor = math.exp(-effectiveDelta * sensitivity);
+        _zoomController.applyDesktopZoomPan(
+          containerSize: fullSize,
+          focalPoint: scrollEvent.localPosition,
+          zoomScaleFactor: factor,
+          panDelta: Offset.zero,
+          allowOvershoot: false,
+          smoothing: desktopZoom.smoothing,
+        );
+
+        _updateReverseZoomVisualScale(factor);
+      },
     );
+  }
 
-    _updateReverseZoomVisualScale(factor);
+  void _onPointerDown(PointerDownEvent event) {
+    if (event.kind == PointerDeviceKind.mouse) {
+      _isPrimaryPointerDown = event.buttons == kPrimaryButton ||
+          (event.buttons & kPrimaryButton) != 0;
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    if (event.kind == PointerDeviceKind.mouse) {
+      _isPrimaryPointerDown = false;
+    }
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    if (event.kind == PointerDeviceKind.mouse) {
+      _isPrimaryPointerDown = false;
+    }
   }
 
   void _onPointerPanZoomStart(PointerPanZoomStartEvent event) {
@@ -528,45 +553,44 @@ class _BeforeAfterState extends State<BeforeAfter> {
   }
 
   void _onPointerPanZoomUpdate(PointerPanZoomUpdateEvent event, Size fullSize) {
-    if (!widget.enableZoom || !_desktopZoom.enabled) return;
+    final desktopZoom = widget.desktopZoom;
+    if (!widget.enableZoom || !desktopZoom.enabled) return;
 
     var zoomDelta = event.scale / _lastTrackpadScale;
     _lastTrackpadScale = event.scale;
-    var panDelta = event.localPanDelta * widget.zoomPanSensitivity;
+    // Trackpad pan movement is intentionally ignored on desktop/web.
+    // Panning there is handled by click + drag only.
+    const panDelta = Offset.zero;
 
     if ((zoomDelta - 1.0).abs() < 0.0001) {
-      if (_desktopZoom.requiresModifier && !_isZoomModifierPressed()) {
-        return;
-      }
       final axisDelta =
           event.localPanDelta.dy.abs() >= event.localPanDelta.dx.abs()
               ? event.localPanDelta.dy
               : event.localPanDelta.dx;
-      if (axisDelta != 0.0) {
+      final canConvertPanToZoom = _zoomController.effectiveZoom <= 1.001 &&
+          (!desktopZoom.requiresModifier || _isZoomModifierPressed());
+
+      // On Web/trackpads, some devices emit scale ~= 1 and only pan deltas.
+      // Convert pan to zoom only near base zoom; while zoomed-in, keep pan.
+      if (axisDelta != 0.0 && canConvertPanToZoom) {
         final effectiveDelta = axisDelta.sign *
-            math.max(axisDelta.abs(), _desktopZoom.panToZoomMinStep);
+            math.max(axisDelta.abs(), desktopZoom.panToZoomMinStep);
         final sensitivity =
-            _desktopZoom.sensitivity * _desktopZoom.panToZoomSensitivity;
+            desktopZoom.sensitivity * desktopZoom.panToZoomSensitivity;
         zoomDelta = math.exp(-effectiveDelta * sensitivity);
-        panDelta = Offset.zero;
       }
     }
 
-    if ((zoomDelta - 1.0).abs() > 0.0001) {
-      _zoomController.applyDesktopZoomPan(
-        containerSize: fullSize,
-        focalPoint: event.localPosition,
-        zoomScaleFactor: zoomDelta,
-        panDelta: panDelta,
-        allowOvershoot: true,
-        smoothing: _desktopZoom.smoothing,
-      );
-    } else {
-      _zoomController.updateFromGesture(
-        containerSize: fullSize,
-        panDelta: panDelta,
-      );
-    }
+    if ((zoomDelta - 1.0).abs() <= 0.0001) return;
+
+    _zoomController.applyDesktopZoomPan(
+      containerSize: fullSize,
+      focalPoint: event.localPosition,
+      zoomScaleFactor: zoomDelta,
+      panDelta: panDelta,
+      allowOvershoot: true,
+      smoothing: desktopZoom.smoothing,
+    );
 
     _updateReverseZoomVisualScale(event.scale);
   }
@@ -586,6 +610,13 @@ class _BeforeAfterState extends State<BeforeAfter> {
     }
     return pressed.contains(LogicalKeyboardKey.controlLeft) ||
         pressed.contains(LogicalKeyboardKey.controlRight);
+  }
+
+  bool get _isDesktopLike {
+    if (kIsWeb) return true;
+    return defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
   }
 
   void _updateReverseZoomVisualScale(double gestureScale) {
@@ -768,28 +799,6 @@ class _BeforeAfterScene extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ResolvedDesktopZoom {
-  const _ResolvedDesktopZoom({
-    required this.enabled,
-    required this.requiresModifier,
-    required this.sensitivity,
-    required this.smoothing,
-    required this.mouseSensitivityMultiplier,
-    required this.mouseMinStep,
-    required this.panToZoomSensitivity,
-    required this.panToZoomMinStep,
-  });
-
-  final bool enabled;
-  final bool requiresModifier;
-  final double sensitivity;
-  final double smoothing;
-  final double mouseSensitivityMultiplier;
-  final double mouseMinStep;
-  final double panToZoomSensitivity;
-  final double panToZoomMinStep;
 }
 
 class _VisualGeometry {

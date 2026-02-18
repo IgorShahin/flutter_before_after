@@ -110,6 +110,11 @@ class ZoomController extends ChangeNotifier {
     double zoomDelta = 1.0,
     double rotationDelta = 0.0,
   }) {
+    final oldZoom = _zoom;
+    final oldOvershoot = _zoomOvershoot;
+    final oldPan = _pan;
+    final oldRotation = _rotation;
+
     _lastContainerSize = containerSize;
     _reboundTimer?.cancel();
     final previousEffectiveZoom = _effectiveZoom;
@@ -170,7 +175,13 @@ class ZoomController extends ChangeNotifier {
 
     _clampPanToBounds();
 
-    notifyListeners();
+    final changed = oldZoom != _zoom ||
+        oldOvershoot != _zoomOvershoot ||
+        oldPan != _pan ||
+        oldRotation != _rotation;
+    if (changed) {
+      notifyListeners();
+    }
   }
 
   /// Applies zoom around a focal point in container coordinates.
@@ -205,6 +216,10 @@ class ZoomController extends ChangeNotifier {
     bool allowOvershoot = false,
     double smoothing = 1.0,
   }) {
+    final oldZoom = _zoom;
+    final oldOvershoot = _zoomOvershoot;
+    final oldPan = _pan;
+
     _lastContainerSize = containerSize;
     if (!zoomEnabled || zoomScaleFactor == 1.0 && panDelta == Offset.zero) {
       return;
@@ -243,7 +258,12 @@ class ZoomController extends ChangeNotifier {
 
     _pan = nextPan;
     _clampPanToBounds();
-    notifyListeners();
+
+    final changed =
+        oldZoom != _zoom || oldOvershoot != _zoomOvershoot || oldPan != _pan;
+    if (changed) {
+      notifyListeners();
+    }
   }
 
   /// Resets zoom, pan, and rotation to their initial values.
@@ -270,15 +290,25 @@ class ZoomController extends ChangeNotifier {
     _reboundTimer = Timer.periodic(const Duration(milliseconds: tickMs), (
       timer,
     ) {
+      final oldOvershoot = _zoomOvershoot;
+      final oldPan = _pan;
+
       tick++;
       final t = (tick / totalTicks).clamp(0.0, 1.0);
       final eased = Curves.easeOutCubic.transform(t);
       _zoomOvershoot = start * (1.0 - eased);
       _clampPanToBounds();
-      notifyListeners();
+      if (oldOvershoot != _zoomOvershoot || oldPan != _pan) {
+        notifyListeners();
+      }
       if (t >= 1.0) {
+        final prevOvershoot = _zoomOvershoot;
+        final prevPan = _pan;
         _zoomOvershoot = 0.0;
         _clampPanToBounds();
+        if (prevOvershoot != _zoomOvershoot || prevPan != _pan) {
+          notifyListeners();
+        }
         timer.cancel();
       }
     });
