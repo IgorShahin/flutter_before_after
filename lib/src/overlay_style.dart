@@ -16,9 +16,9 @@ class OverlayStyle {
     this.verticalThumbMove = false,
     this.thumbPositionPercent = 50.0,
   }) : assert(
-         thumbPositionPercent >= 0.0 && thumbPositionPercent <= 100.0,
-         'thumbPositionPercent must be between 0.0 and 100.0',
-       );
+          thumbPositionPercent >= 0.0 && thumbPositionPercent <= 100.0,
+          'thumbPositionPercent must be between 0.0 and 100.0',
+        );
 
   /// Color of the divider line.
   final Color dividerColor;
@@ -51,7 +51,6 @@ class OverlayStyle {
   /// Only used when [verticalThumbMove] is false.
   final double thumbPositionPercent;
 
-  /// Creates a copy of this style with the given fields replaced.
   OverlayStyle copyWith({
     Color? dividerColor,
     double? dividerWidth,

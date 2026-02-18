@@ -37,7 +37,6 @@ class DefaultOverlay extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Divider line
           Positioned(
             left: position.dx - style.dividerWidth / 2,
             top: 0,
@@ -56,7 +55,6 @@ class DefaultOverlay extends StatelessWidget {
               ),
             ),
           ),
-          // Thumb
           Positioned(
             left: position.dx - style.thumbSize / 2,
             top: thumbY - style.thumbSize / 2,

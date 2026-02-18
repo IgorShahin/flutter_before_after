@@ -1,8 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'content_order.dart';
+import 'desktop_zoom_options.dart';
 import 'default_overlay.dart';
 import 'labels.dart';
 import 'overlay_style.dart';
@@ -22,6 +26,8 @@ class BeforeAfter extends StatefulWidget {
     this.onProgressEnd,
     this.enableProgressWithTouch = true,
     this.enableZoom = true,
+    this.gestureZoomSmoothing = 0.7,
+    this.zoomPanSensitivity = 1.0,
     this.contentOrder = ContentOrder.beforeAfter,
     this.overlayStyle = const OverlayStyle(),
     this.beforeLabelBuilder,
@@ -31,6 +37,7 @@ class BeforeAfter extends StatefulWidget {
     this.sliderDragMode = SliderDragMode.fullOverlay,
     this.showLabels = true,
     this.fixedLabels = true,
+    this.desktopZoom = const DesktopZoomOptions(),
     this.enableReverseZoomVisualEffect = false,
     this.reverseZoomMinScale = 0.92,
     this.reverseZoomMaxShrink = 0.18,
@@ -46,6 +53,14 @@ class BeforeAfter extends StatefulWidget {
         assert(
           reverseZoomEffectBorderRadius >= 0.0,
           'reverseZoomEffectBorderRadius must be >= 0.0',
+        ),
+        assert(
+          zoomPanSensitivity > 0.0,
+          'zoomPanSensitivity must be > 0.0',
+        ),
+        assert(
+          gestureZoomSmoothing > 0.0 && gestureZoomSmoothing <= 1.0,
+          'gestureZoomSmoothing must be in (0.0, 1.0]',
         );
 
   /// The "before" widget to display.
@@ -72,6 +87,16 @@ class BeforeAfter extends StatefulWidget {
 
   /// Whether pinch-to-zoom is enabled.
   final bool enableZoom;
+
+  /// Smoothing factor for pinch gesture zoom.
+  ///
+  /// Lower values feel softer, higher values react faster.
+  final double gestureZoomSmoothing;
+
+  /// Pan speed multiplier while zooming.
+  ///
+  /// `1.0` is default speed, `<1.0` slower, `>1.0` faster.
+  final double zoomPanSensitivity;
 
   /// The order in which before and after content is displayed.
   final ContentOrder contentOrder;
@@ -100,6 +125,9 @@ class BeforeAfter extends StatefulWidget {
   /// Whether labels stay fixed on screen while content is zoomed/panned.
   final bool fixedLabels;
 
+  /// Grouped desktop zoom configuration.
+  final DesktopZoomOptions desktopZoom;
+
   /// Adds a visual "container shrink" effect while zooming out.
   ///
   /// This only affects rendering feedback and does not change actual zoom math.
@@ -119,31 +147,36 @@ class BeforeAfter extends StatefulWidget {
 }
 
 class _BeforeAfterState extends State<BeforeAfter> {
-  late ValueNotifier<double> _progressNotifier;
-  bool _isDragging = false;
+  late final ValueNotifier<double> _progressNotifier;
+
   late ZoomController _zoomController;
   bool _ownsZoomController = false;
 
+  bool _isDragging = false;
   Offset? _lastFocalPoint;
   double? _lastScale;
   int _lastPointerCount = 0;
+  double _lastTrackpadScale = 1.0;
+
   double _containerVisualScaleTarget = 1.0;
+
+  _ResolvedDesktopZoom get _desktopZoom => _ResolvedDesktopZoom(
+        enabled: widget.desktopZoom.enabled,
+        requiresModifier: widget.desktopZoom.requiresModifier,
+        sensitivity: widget.desktopZoom.sensitivity,
+        smoothing: widget.desktopZoom.smoothing,
+        mouseSensitivityMultiplier:
+            widget.desktopZoom.mouseSensitivityMultiplier,
+        mouseMinStep: widget.desktopZoom.mouseMinStep,
+        panToZoomSensitivity: widget.desktopZoom.panToZoomSensitivity,
+        panToZoomMinStep: widget.desktopZoom.panToZoomMinStep,
+      );
 
   @override
   void initState() {
     super.initState();
     _progressNotifier = ValueNotifier<double>(widget.progress ?? 0.5);
     _initZoomController();
-  }
-
-  void _initZoomController() {
-    if (widget.zoomController != null) {
-      _zoomController = widget.zoomController!;
-      _ownsZoomController = false;
-    } else {
-      _zoomController = ZoomController();
-      _ownsZoomController = true;
-    }
   }
 
   @override
@@ -169,24 +202,152 @@ class _BeforeAfterState extends State<BeforeAfter> {
     super.dispose();
   }
 
-  void _updateProgress(double screenX, Size size) {
-    final geometry = _visualGeometry(size);
-    final localX = screenX - geometry.offsetX;
-    final newProgress = (localX / geometry.width).clamp(0.0, 1.0);
-    _progressNotifier.value = newProgress;
-    widget.onProgressChanged?.call(newProgress);
+  void _initZoomController() {
+    if (widget.zoomController != null) {
+      _zoomController = widget.zoomController!;
+      _ownsZoomController = false;
+    } else {
+      _zoomController = ZoomController();
+      _ownsZoomController = true;
+    }
   }
 
-  ({double width, double height, double offsetX, double offsetY})
-      _visualGeometry(Size size) {
+  @override
+  Widget build(BuildContext context) {
+    final sideContent = _resolveSideContent(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fullSize = Size(constraints.maxWidth, constraints.maxHeight);
+
+        return ValueListenableBuilder<double>(
+          valueListenable: _progressNotifier,
+          builder: (context, progress, _) {
+            return TweenAnimationBuilder<double>(
+              tween: Tween<double>(
+                begin: 1.0,
+                end: widget.enableReverseZoomVisualEffect
+                    ? _containerVisualScaleTarget
+                    : 1.0,
+              ),
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              builder: (context, visualScale, _) {
+                final visual = _visualGeometry(fullSize, visualScale);
+
+                final scene = _BeforeAfterScene(
+                  fullSize: fullSize,
+                  visual: visual,
+                  progress: progress,
+                  sideContent: sideContent,
+                  enableZoom: widget.enableZoom,
+                  showLabels: widget.showLabels,
+                  fixedLabels: widget.fixedLabels,
+                  enableReverseZoomVisualEffect:
+                      widget.enableReverseZoomVisualEffect,
+                  reverseZoomEffectBorderRadius:
+                      widget.reverseZoomEffectBorderRadius,
+                  overlayBuilder: widget.overlay,
+                  overlayStyle: widget.overlayStyle,
+                  zoomController: _zoomController,
+                );
+
+                return GestureDetector(
+                  onScaleStart: _onScaleStart,
+                  onScaleUpdate: (details) => _onScaleUpdate(details, fullSize),
+                  onScaleEnd: _onScaleEnd,
+                  onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
+                  child: Listener(
+                    onPointerSignal: (event) =>
+                        _onPointerSignal(event, fullSize),
+                    onPointerPanZoomStart: _onPointerPanZoomStart,
+                    onPointerPanZoomUpdate: (event) =>
+                        _onPointerPanZoomUpdate(event, fullSize),
+                    onPointerPanZoomEnd: _onPointerPanZoomEnd,
+                    child: scene,
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  _SideContent _resolveSideContent(BuildContext context) {
+    if (widget.contentOrder == ContentOrder.beforeAfter) {
+      return _SideContent(
+        leftChild: widget.beforeChild,
+        rightChild: widget.afterChild,
+        leftLabel: widget.beforeLabelBuilder?.call(context) ??
+            BeforeLabel(contentOrder: widget.contentOrder),
+        rightLabel: widget.afterLabelBuilder?.call(context) ??
+            AfterLabel(contentOrder: widget.contentOrder),
+      );
+    }
+
+    return _SideContent(
+      leftChild: widget.afterChild,
+      rightChild: widget.beforeChild,
+      leftLabel: widget.afterLabelBuilder?.call(context) ??
+          AfterLabel(contentOrder: widget.contentOrder),
+      rightLabel: widget.beforeLabelBuilder?.call(context) ??
+          BeforeLabel(contentOrder: widget.contentOrder),
+    );
+  }
+
+  _VisualGeometry _visualGeometry(Size fullSize, double visualScale) {
+    final width = fullSize.width * visualScale;
+    final height = fullSize.height * visualScale;
+    final offsetX = (fullSize.width - width) / 2;
+    final offsetY = (fullSize.height - height) / 2;
+    return _VisualGeometry(
+      width: width,
+      height: height,
+      offsetX: offsetX,
+      offsetY: offsetY,
+    );
+  }
+
+  void _updateProgress(double screenX, Size fullSize) {
     final visualScale = widget.enableReverseZoomVisualEffect
         ? _containerVisualScaleTarget.clamp(0.0, 1.0)
         : 1.0;
-    final width = size.width * visualScale;
-    final height = size.height * visualScale;
-    final offsetX = (size.width - width) / 2;
-    final offsetY = (size.height - height) / 2;
-    return (width: width, height: height, offsetX: offsetX, offsetY: offsetY);
+    final visual = _visualGeometry(fullSize, visualScale);
+    final localX = screenX - visual.offsetX;
+    final next = (localX / visual.width).clamp(0.0, 1.0);
+    _progressNotifier.value = next;
+    widget.onProgressChanged?.call(next);
+  }
+
+  bool _canStartSliderDrag(
+    Offset localPosition,
+    Size fullSize,
+    double progress,
+  ) {
+    final visualScale = widget.enableReverseZoomVisualEffect
+        ? _containerVisualScaleTarget.clamp(0.0, 1.0)
+        : 1.0;
+    final visual = _visualGeometry(fullSize, visualScale);
+
+    final dividerScreenX = visual.offsetX + progress * visual.width;
+    final thumbCenterY = widget.overlayStyle.verticalThumbMove
+        ? visual.offsetY + visual.height / 2
+        : visual.offsetY +
+            visual.height * (widget.overlayStyle.thumbPositionPercent / 100.0);
+
+    switch (widget.sliderDragMode) {
+      case SliderDragMode.thumbOnly:
+        return _isOnThumb(localPosition, dividerScreenX, thumbCenterY);
+      case SliderDragMode.fullOverlay:
+        return _isOnOverlayLine(
+          localPosition,
+          dividerScreenX,
+          visual.offsetY,
+          visual.height,
+        );
+    }
   }
 
   bool _isOnOverlayLine(
@@ -222,279 +383,85 @@ class _BeforeAfterState extends State<BeforeAfter> {
     return dx <= hitRadius && dy <= hitRadius;
   }
 
-  bool _canStartSliderDrag(
-    Offset localPosition,
-    Size size,
-    double progress,
-  ) {
-    final geometry = _visualGeometry(size);
-    final dividerScreenX = geometry.offsetX + progress * geometry.width;
-    final thumbCenterY = widget.overlayStyle.verticalThumbMove
-        ? geometry.offsetY + geometry.height / 2
-        : geometry.offsetY +
-            geometry.height *
-                (widget.overlayStyle.thumbPositionPercent / 100.0);
-
-    switch (widget.sliderDragMode) {
-      case SliderDragMode.thumbOnly:
-        return _isOnThumb(localPosition, dividerScreenX, thumbCenterY);
-      case SliderDragMode.fullOverlay:
-        return _isOnOverlayLine(
-          localPosition,
-          dividerScreenX,
-          geometry.offsetY,
-          geometry.height,
-        );
-    }
-  }
-
-  double _screenToContentX(double screenX, Size size) {
-    if (!widget.enableZoom) return screenX;
-    final centerX = size.width / 2;
-    return ((screenX - centerX - _zoomController.pan.dx) /
-            _zoomController.zoom) +
-        centerX;
-  }
-
-  ({Widget leftChild, Widget rightChild, Widget leftLabel, Widget rightLabel})
-      _resolveSideContent(BuildContext context) {
-    if (widget.contentOrder == ContentOrder.beforeAfter) {
-      return (
-        leftChild: widget.beforeChild,
-        rightChild: widget.afterChild,
-        leftLabel: widget.beforeLabelBuilder?.call(context) ??
-            BeforeLabel(contentOrder: widget.contentOrder),
-        rightLabel: widget.afterLabelBuilder?.call(context) ??
-            AfterLabel(contentOrder: widget.contentOrder),
-      );
-    }
-
-    return (
-      leftChild: widget.afterChild,
-      rightChild: widget.beforeChild,
-      leftLabel: widget.afterLabelBuilder?.call(context) ??
-          AfterLabel(contentOrder: widget.contentOrder),
-      rightLabel: widget.beforeLabelBuilder?.call(context) ??
-          BeforeLabel(contentOrder: widget.contentOrder),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        return ValueListenableBuilder<double>(
-          valueListenable: _progressNotifier,
-          builder: (context, progress, _) {
-            final sideContent = _resolveSideContent(context);
-            return TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                begin: 1.0,
-                end: widget.enableReverseZoomVisualEffect
-                    ? _containerVisualScaleTarget
-                    : 1.0,
-              ),
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeOutCubic,
-              builder: (context, visualScale, _) {
-                final visualSize = Size(
-                  size.width * visualScale,
-                  size.height * visualScale,
-                );
-                final dividerScreenX = progress * visualSize.width;
-
-                Widget buildZoomableContent(double dividerContentX) {
-                  Widget content = RepaintBoundary(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Positioned.fill(child: sideContent.rightChild),
-                        Positioned.fill(
-                          child: ClipRect(
-                            clipper: _LeftRectClipper(dividerContentX),
-                            child: sideContent.leftChild,
-                          ),
-                        ),
-                        if (widget.showLabels && !widget.fixedLabels)
-                          Align(
-                            alignment: Alignment.topLeft,
-                            child: sideContent.leftLabel,
-                          ),
-                        if (widget.showLabels && !widget.fixedLabels)
-                          Align(
-                            alignment: Alignment.topRight,
-                            child: sideContent.rightLabel,
-                          ),
-                      ],
-                    ),
-                  );
-
-                  if (widget.enableZoom) {
-                    content = Transform(
-                      transform: _zoomController.transformationMatrix,
-                      alignment: Alignment.center,
-                      child: content,
-                    );
-                  }
-
-                  return content;
-                }
-
-                final zoomableContent = widget.enableZoom
-                    ? AnimatedBuilder(
-                        animation: _zoomController,
-                        builder: (context, child) {
-                          final dividerContentX =
-                              _screenToContentX(dividerScreenX, visualSize)
-                                  .clamp(0.0, visualSize.width);
-                          return buildZoomableContent(dividerContentX);
-                        },
-                      )
-                    : buildZoomableContent(dividerScreenX);
-
-                final overlayPosition =
-                    Offset(dividerScreenX, visualSize.height / 2);
-                final overlay =
-                    widget.overlay?.call(visualSize, overlayPosition) ??
-                        DefaultOverlay(
-                          width: visualSize.width,
-                          height: visualSize.height,
-                          position: overlayPosition,
-                          style: widget.overlayStyle,
-                        );
-
-                final shrinkStrength = (1.0 - visualScale).clamp(0.0, 1.0);
-                final shadowAlpha = widget.enableReverseZoomVisualEffect
-                    ? (0.05 + shrinkStrength * 0.18).clamp(0.0, 0.3)
-                    : 0.0;
-                final radius = widget.reverseZoomEffectBorderRadius;
-
-                return GestureDetector(
-                  onScaleStart: _onScaleStart,
-                  onScaleUpdate: (details) => _onScaleUpdate(details, size),
-                  onScaleEnd: _onScaleEnd,
-                  onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
-                  child: ClipRect(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Center(
-                          child: SizedBox(
-                            width: visualSize.width,
-                            height: visualSize.height,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(radius),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black
-                                        .withValues(alpha: shadowAlpha),
-                                    blurRadius: 22,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(radius),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    zoomableContent,
-                                    if (widget.showLabels && widget.fixedLabels)
-                                      Align(
-                                        alignment: Alignment.topLeft,
-                                        child: sideContent.leftLabel,
-                                      ),
-                                    if (widget.showLabels && widget.fixedLabels)
-                                      Align(
-                                        alignment: Alignment.topRight,
-                                        child: sideContent.rightLabel,
-                                      ),
-                                    RepaintBoundary(child: overlay),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _onScaleStart(ScaleStartDetails details) {
     _lastFocalPoint = details.localFocalPoint;
     _lastScale = 1.0;
     _lastPointerCount = details.pointerCount;
 
     if (widget.enableProgressWithTouch && details.pointerCount == 1) {
-      final size = context.size;
-      if (size != null) {
-        if (_canStartSliderDrag(
-          details.localFocalPoint,
-          size,
-          _progressNotifier.value,
-        )) {
-          _isDragging = true;
-          widget.onProgressStart?.call(_progressNotifier.value);
-        }
+      final fullSize = context.size;
+      if (fullSize == null) return;
+      if (_canStartSliderDrag(
+          details.localFocalPoint, fullSize, _progressNotifier.value)) {
+        _isDragging = true;
+        widget.onProgressStart?.call(_progressNotifier.value);
       }
     }
   }
 
-  void _onScaleUpdate(ScaleUpdateDetails details, Size size) {
+  void _onScaleUpdate(ScaleUpdateDetails details, Size fullSize) {
     if (_isDragging) {
-      _updateProgress(details.localFocalPoint.dx, size);
-    } else if (widget.enableZoom && details.pointerCount >= 2) {
-      if (_lastPointerCount != details.pointerCount) {
-        _lastFocalPoint = details.localFocalPoint;
-        _lastScale = details.scale;
-        _lastPointerCount = details.pointerCount;
-        return;
-      }
+      _updateProgress(details.localFocalPoint.dx, fullSize);
+      return;
+    }
 
-      final panDelta = details.localFocalPoint -
-          (_lastFocalPoint ?? details.localFocalPoint);
-      final zoomDelta = details.scale / (_lastScale ?? 1.0);
+    if (widget.enableZoom && details.pointerCount >= 2) {
+      _handlePinchUpdate(details, fullSize);
+      return;
+    }
 
-      _zoomController.updateFromGesture(
-        containerSize: size,
-        panDelta: panDelta,
-        zoomDelta: zoomDelta,
-      );
-
-      _updateReverseZoomVisualScale(details.scale);
-
-      _lastFocalPoint = details.localFocalPoint;
-      _lastScale = details.scale;
-    } else if (widget.enableZoom &&
+    if (widget.enableZoom &&
         _zoomController.zoom > 1.0 &&
         details.pointerCount == 1) {
-      if (_lastPointerCount != details.pointerCount) {
-        _lastFocalPoint = details.localFocalPoint;
-        _lastPointerCount = details.pointerCount;
-        return;
-      }
-
-      final panDelta = details.localFocalPoint -
-          (_lastFocalPoint ?? details.localFocalPoint);
-      _zoomController.updateFromGesture(
-        containerSize: size,
-        panDelta: panDelta,
-      );
-
-      _lastFocalPoint = details.localFocalPoint;
-    } else {
-      _lastPointerCount = details.pointerCount;
+      _handlePanUpdate(details, fullSize);
+      return;
     }
+
+    _lastPointerCount = details.pointerCount;
+  }
+
+  void _handlePinchUpdate(ScaleUpdateDetails details, Size fullSize) {
+    if (_lastPointerCount != details.pointerCount) {
+      _lastFocalPoint = details.localFocalPoint;
+      _lastScale = details.scale;
+      _lastPointerCount = details.pointerCount;
+      return;
+    }
+
+    final rawPanDelta =
+        details.localFocalPoint - (_lastFocalPoint ?? details.localFocalPoint);
+    final panDelta = rawPanDelta * widget.zoomPanSensitivity;
+    final zoomDelta = details.scale / (_lastScale ?? 1.0);
+    final smoothedZoomDelta =
+        1.0 + (zoomDelta - 1.0) * widget.gestureZoomSmoothing;
+
+    _zoomController.updateFromGesture(
+      containerSize: fullSize,
+      panDelta: panDelta,
+      zoomDelta: smoothedZoomDelta,
+    );
+
+    _updateReverseZoomVisualScale(details.scale);
+    _lastFocalPoint = details.localFocalPoint;
+    _lastScale = details.scale;
+  }
+
+  void _handlePanUpdate(ScaleUpdateDetails details, Size fullSize) {
+    if (_lastPointerCount != details.pointerCount) {
+      _lastFocalPoint = details.localFocalPoint;
+      _lastPointerCount = details.pointerCount;
+      return;
+    }
+
+    final rawPanDelta =
+        details.localFocalPoint - (_lastFocalPoint ?? details.localFocalPoint);
+    final panDelta = rawPanDelta * widget.zoomPanSensitivity;
+    _zoomController.updateFromGesture(
+      containerSize: fullSize,
+      panDelta: panDelta,
+    );
+
+    _lastFocalPoint = details.localFocalPoint;
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
@@ -519,10 +486,111 @@ class _BeforeAfterState extends State<BeforeAfter> {
     _zoomController.reset();
   }
 
+  void _onPointerSignal(PointerSignalEvent event, Size fullSize) {
+    if (!widget.enableZoom || !_desktopZoom.enabled) return;
+    if (event is! PointerScrollEvent) return;
+
+    final isLikelyMouse = event.kind == PointerDeviceKind.mouse ||
+        event.kind == PointerDeviceKind.unknown;
+    if (_desktopZoom.requiresModifier &&
+        !_isZoomModifierPressed() &&
+        !isLikelyMouse) {
+      return;
+    }
+
+    final axisDelta = event.scrollDelta.dy.abs() >= event.scrollDelta.dx.abs()
+        ? event.scrollDelta.dy
+        : event.scrollDelta.dx;
+    if (axisDelta == 0) return;
+
+    final effectiveDelta = axisDelta.sign *
+        math.max(
+            axisDelta.abs(), isLikelyMouse ? _desktopZoom.mouseMinStep : 1.0);
+    final sensitivity = isLikelyMouse
+        ? _desktopZoom.sensitivity * _desktopZoom.mouseSensitivityMultiplier
+        : _desktopZoom.sensitivity;
+
+    final factor = math.exp(-effectiveDelta * sensitivity);
+    _zoomController.applyDesktopZoomPan(
+      containerSize: fullSize,
+      focalPoint: event.localPosition,
+      zoomScaleFactor: factor,
+      panDelta: Offset.zero,
+      allowOvershoot: false,
+      smoothing: _desktopZoom.smoothing,
+    );
+
+    _updateReverseZoomVisualScale(factor);
+  }
+
+  void _onPointerPanZoomStart(PointerPanZoomStartEvent event) {
+    _lastTrackpadScale = 1.0;
+  }
+
+  void _onPointerPanZoomUpdate(PointerPanZoomUpdateEvent event, Size fullSize) {
+    if (!widget.enableZoom || !_desktopZoom.enabled) return;
+
+    var zoomDelta = event.scale / _lastTrackpadScale;
+    _lastTrackpadScale = event.scale;
+    var panDelta = event.localPanDelta * widget.zoomPanSensitivity;
+
+    if ((zoomDelta - 1.0).abs() < 0.0001) {
+      if (_desktopZoom.requiresModifier && !_isZoomModifierPressed()) {
+        return;
+      }
+      final axisDelta =
+          event.localPanDelta.dy.abs() >= event.localPanDelta.dx.abs()
+              ? event.localPanDelta.dy
+              : event.localPanDelta.dx;
+      if (axisDelta != 0.0) {
+        final effectiveDelta = axisDelta.sign *
+            math.max(axisDelta.abs(), _desktopZoom.panToZoomMinStep);
+        final sensitivity =
+            _desktopZoom.sensitivity * _desktopZoom.panToZoomSensitivity;
+        zoomDelta = math.exp(-effectiveDelta * sensitivity);
+        panDelta = Offset.zero;
+      }
+    }
+
+    if ((zoomDelta - 1.0).abs() > 0.0001) {
+      _zoomController.applyDesktopZoomPan(
+        containerSize: fullSize,
+        focalPoint: event.localPosition,
+        zoomScaleFactor: zoomDelta,
+        panDelta: panDelta,
+        allowOvershoot: true,
+        smoothing: _desktopZoom.smoothing,
+      );
+    } else {
+      _zoomController.updateFromGesture(
+        containerSize: fullSize,
+        panDelta: panDelta,
+      );
+    }
+
+    _updateReverseZoomVisualScale(event.scale);
+  }
+
+  void _onPointerPanZoomEnd(PointerPanZoomEndEvent event) {
+    _lastTrackpadScale = 1.0;
+    if (widget.enableZoom) {
+      _zoomController.onGestureEnd();
+    }
+  }
+
+  bool _isZoomModifierPressed() {
+    final pressed = HardwareKeyboard.instance.logicalKeysPressed;
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
+      return pressed.contains(LogicalKeyboardKey.metaLeft) ||
+          pressed.contains(LogicalKeyboardKey.metaRight);
+    }
+    return pressed.contains(LogicalKeyboardKey.controlLeft) ||
+        pressed.contains(LogicalKeyboardKey.controlRight);
+  }
+
   void _updateReverseZoomVisualScale(double gestureScale) {
     if (!widget.enableReverseZoomVisualEffect) return;
 
-    // Reverse-zoom container effect is shown only near base zoom.
     if (_zoomController.zoom > 1.001) {
       if (_containerVisualScaleTarget != 1.0) {
         setState(() {
@@ -532,7 +600,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
       return;
     }
 
-    double nextScale = 1.0;
+    var nextScale = 1.0;
     if (gestureScale < 1.0) {
       final effectStrength = Curves.easeOutCubic.transform(
         (1.0 - gestureScale).clamp(0.0, 1.0),
@@ -549,6 +617,207 @@ class _BeforeAfterState extends State<BeforeAfter> {
       });
     }
   }
+}
+
+class _BeforeAfterScene extends StatelessWidget {
+  const _BeforeAfterScene({
+    required this.fullSize,
+    required this.visual,
+    required this.progress,
+    required this.sideContent,
+    required this.enableZoom,
+    required this.showLabels,
+    required this.fixedLabels,
+    required this.enableReverseZoomVisualEffect,
+    required this.reverseZoomEffectBorderRadius,
+    required this.overlayBuilder,
+    required this.overlayStyle,
+    required this.zoomController,
+  });
+
+  final Size fullSize;
+  final _VisualGeometry visual;
+  final double progress;
+  final _SideContent sideContent;
+  final bool enableZoom;
+  final bool showLabels;
+  final bool fixedLabels;
+  final bool enableReverseZoomVisualEffect;
+  final double reverseZoomEffectBorderRadius;
+  final Widget Function(Size size, Offset position)? overlayBuilder;
+  final OverlayStyle overlayStyle;
+  final ZoomController zoomController;
+
+  @override
+  Widget build(BuildContext context) {
+    final dividerScreenX = progress * visual.width;
+    final overlayPosition = Offset(dividerScreenX, visual.height / 2);
+
+    Widget buildZoomableContent(double dividerContentX) {
+      Widget content = RepaintBoundary(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(child: sideContent.rightChild),
+            Positioned.fill(
+              child: ClipRect(
+                clipper: _LeftRectClipper(dividerContentX),
+                child: sideContent.leftChild,
+              ),
+            ),
+            if (showLabels && !fixedLabels)
+              Align(
+                alignment: Alignment.topLeft,
+                child: sideContent.leftLabel,
+              ),
+            if (showLabels && !fixedLabels)
+              Align(
+                alignment: Alignment.topRight,
+                child: sideContent.rightLabel,
+              ),
+          ],
+        ),
+      );
+
+      if (enableZoom) {
+        content = Transform(
+          transform: zoomController.transformationMatrix,
+          alignment: Alignment.center,
+          child: content,
+        );
+      }
+      return content;
+    }
+
+    final zoomableContent = enableZoom
+        ? AnimatedBuilder(
+            animation: zoomController,
+            builder: (context, _) {
+              final centerX = visual.width / 2;
+              final dividerContentX =
+                  ((dividerScreenX - centerX - zoomController.pan.dx) /
+                              zoomController.effectiveZoom +
+                          centerX)
+                      .clamp(0.0, visual.width);
+              return buildZoomableContent(dividerContentX);
+            },
+          )
+        : buildZoomableContent(dividerScreenX);
+
+    final overlay = overlayBuilder?.call(
+          Size(visual.width, visual.height),
+          overlayPosition,
+        ) ??
+        DefaultOverlay(
+          width: visual.width,
+          height: visual.height,
+          position: overlayPosition,
+          style: overlayStyle,
+        );
+
+    final shrinkStrength =
+        (1.0 - visual.width / fullSize.width).clamp(0.0, 1.0);
+    final shadowAlpha = enableReverseZoomVisualEffect
+        ? (0.05 + shrinkStrength * 0.18).clamp(0.0, 0.3)
+        : 0.0;
+    final radius = reverseZoomEffectBorderRadius;
+
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: SizedBox(
+              width: visual.width,
+              height: visual.height,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(radius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: shadowAlpha),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(radius),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      zoomableContent,
+                      if (showLabels && fixedLabels)
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: sideContent.leftLabel,
+                        ),
+                      if (showLabels && fixedLabels)
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: sideContent.rightLabel,
+                        ),
+                      RepaintBoundary(child: overlay),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResolvedDesktopZoom {
+  const _ResolvedDesktopZoom({
+    required this.enabled,
+    required this.requiresModifier,
+    required this.sensitivity,
+    required this.smoothing,
+    required this.mouseSensitivityMultiplier,
+    required this.mouseMinStep,
+    required this.panToZoomSensitivity,
+    required this.panToZoomMinStep,
+  });
+
+  final bool enabled;
+  final bool requiresModifier;
+  final double sensitivity;
+  final double smoothing;
+  final double mouseSensitivityMultiplier;
+  final double mouseMinStep;
+  final double panToZoomSensitivity;
+  final double panToZoomMinStep;
+}
+
+class _VisualGeometry {
+  const _VisualGeometry({
+    required this.width,
+    required this.height,
+    required this.offsetX,
+    required this.offsetY,
+  });
+
+  final double width;
+  final double height;
+  final double offsetX;
+  final double offsetY;
+}
+
+class _SideContent {
+  const _SideContent({
+    required this.leftChild,
+    required this.rightChild,
+    required this.leftLabel,
+    required this.rightLabel,
+  });
+
+  final Widget leftChild;
+  final Widget rightChild;
+  final Widget leftLabel;
+  final Widget rightLabel;
 }
 
 class _LeftRectClipper extends CustomClipper<Rect> {
