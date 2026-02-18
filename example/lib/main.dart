@@ -121,6 +121,7 @@ class _DemoPageState extends State<DemoPage> {
                               ),
                               progress: _progress,
                               // showLabels: false,
+                              labelBehavior: LabelBehavior.attachedToContent,
                               sliderDragMode: SliderDragMode.thumbOnly,
                               // gestureZoomSmoothing: 0.45,
                               zoomPanSensitivity: 0.95,

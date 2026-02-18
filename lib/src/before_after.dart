@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'content_order.dart';
 import 'desktop_zoom_options.dart';
 import 'default_overlay.dart';
+import 'label_behavior.dart';
 import 'labels.dart';
 import 'overlay_style.dart';
 import 'slider_drag_mode.dart';
@@ -36,7 +37,8 @@ class BeforeAfter extends StatefulWidget {
     this.zoomController,
     this.sliderDragMode = SliderDragMode.fullOverlay,
     this.showLabels = true,
-    this.fixedLabels = true,
+    this.labelBehavior,
+    @Deprecated('Use labelBehavior instead.') this.fixedLabels = true,
     this.desktopZoom = const DesktopZoomOptions(),
     this.enableReverseZoomVisualEffect = false,
     this.reverseZoomMinScale = 0.92,
@@ -122,7 +124,13 @@ class BeforeAfter extends StatefulWidget {
   /// Whether the "before/after" labels are shown.
   final bool showLabels;
 
+  /// Defines how labels are rendered relative to the slider/content.
+  ///
+  /// If null, behavior is inferred from deprecated `fixedLabels`.
+  final LabelBehavior? labelBehavior;
+
   /// Whether labels stay fixed on screen while content is zoomed/panned.
+  @Deprecated('Use labelBehavior instead.')
   final bool fixedLabels;
 
   /// Grouped desktop zoom configuration.
@@ -231,7 +239,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                   sideContent: sideContent,
                   enableZoom: widget.enableZoom,
                   showLabels: widget.showLabels,
-                  fixedLabels: widget.fixedLabels,
+                  labelBehavior: _effectiveLabelBehavior,
                   enableReverseZoomVisualEffect:
                       widget.enableReverseZoomVisualEffect,
                   reverseZoomEffectBorderRadius:
@@ -265,6 +273,15 @@ class _BeforeAfterState extends State<BeforeAfter> {
         );
       },
     );
+  }
+
+  LabelBehavior get _effectiveLabelBehavior {
+    final configured = widget.labelBehavior;
+    if (configured != null) return configured;
+    // ignore: deprecated_member_use_from_same_package
+    return widget.fixedLabels
+        ? LabelBehavior.staticOverlaySafe
+        : LabelBehavior.attachedToContent;
   }
 
   _SideContent _resolveSideContent(BuildContext context) {
@@ -658,7 +675,7 @@ class _BeforeAfterScene extends StatelessWidget {
     required this.sideContent,
     required this.enableZoom,
     required this.showLabels,
-    required this.fixedLabels,
+    required this.labelBehavior,
     required this.enableReverseZoomVisualEffect,
     required this.reverseZoomEffectBorderRadius,
     required this.overlayBuilder,
@@ -672,7 +689,7 @@ class _BeforeAfterScene extends StatelessWidget {
   final _SideContent sideContent;
   final bool enableZoom;
   final bool showLabels;
-  final bool fixedLabels;
+  final LabelBehavior labelBehavior;
   final bool enableReverseZoomVisualEffect;
   final double reverseZoomEffectBorderRadius;
   final Widget Function(Size size, Offset position)? overlayBuilder;
@@ -683,6 +700,8 @@ class _BeforeAfterScene extends StatelessWidget {
   Widget build(BuildContext context) {
     final dividerScreenX = progress * visual.width;
     final overlayPosition = Offset(dividerScreenX, visual.height / 2);
+    final isAttachedLabels = labelBehavior == LabelBehavior.attachedToContent;
+    final isStaticLabels = labelBehavior == LabelBehavior.staticOverlaySafe;
 
     Widget buildZoomableContent(double dividerContentX) {
       Widget content = RepaintBoundary(
@@ -696,16 +715,6 @@ class _BeforeAfterScene extends StatelessWidget {
                 child: sideContent.leftChild,
               ),
             ),
-            if (showLabels && !fixedLabels)
-              Align(
-                alignment: Alignment.topLeft,
-                child: sideContent.leftLabel,
-              ),
-            if (showLabels && !fixedLabels)
-              Align(
-                alignment: Alignment.topRight,
-                child: sideContent.rightLabel,
-              ),
           ],
         ),
       );
@@ -778,17 +787,37 @@ class _BeforeAfterScene extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       zoomableContent,
-                      if (showLabels && fixedLabels)
+                      RepaintBoundary(child: overlay),
+                      if (showLabels && isAttachedLabels)
+                        Positioned.fill(
+                          child: ClipRect(
+                            clipper: _LeftRectClipper(dividerScreenX),
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: sideContent.leftLabel,
+                            ),
+                          ),
+                        ),
+                      if (showLabels && isAttachedLabels)
+                        Positioned.fill(
+                          child: ClipRect(
+                            clipper: _RightRectClipper(dividerScreenX),
+                            child: Align(
+                              alignment: Alignment.topRight,
+                              child: sideContent.rightLabel,
+                            ),
+                          ),
+                        ),
+                      if (showLabels && isStaticLabels)
                         Align(
                           alignment: Alignment.topLeft,
                           child: sideContent.leftLabel,
                         ),
-                      if (showLabels && fixedLabels)
+                      if (showLabels && isStaticLabels)
                         Align(
                           alignment: Alignment.topRight,
                           child: sideContent.rightLabel,
                         ),
-                      RepaintBoundary(child: overlay),
                     ],
                   ),
                 ),
@@ -841,6 +870,22 @@ class _LeftRectClipper extends CustomClipper<Rect> {
 
   @override
   bool shouldReclip(_LeftRectClipper oldClipper) {
+    return dividerX != oldClipper.dividerX;
+  }
+}
+
+class _RightRectClipper extends CustomClipper<Rect> {
+  _RightRectClipper(this.dividerX);
+
+  final double dividerX;
+
+  @override
+  Rect getClip(Size size) {
+    return Rect.fromLTRB(dividerX, 0, size.width, size.height);
+  }
+
+  @override
+  bool shouldReclip(_RightRectClipper oldClipper) {
     return dividerX != oldClipper.dividerX;
   }
 }
