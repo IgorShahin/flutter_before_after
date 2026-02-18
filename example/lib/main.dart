@@ -63,6 +63,12 @@ class _DemoPageState extends State<DemoPage> {
                   progress: _progress,
                   // showLabels: false,
                   sliderDragMode: SliderDragMode.thumbOnly,
+                  // gestureZoomSmoothing: 0.45,
+                  zoomPanSensitivity: 0.95,
+                  desktopZoom: const DesktopZoomOptions(
+                    requiresModifier: true,
+                    smoothing: 0.4,
+                  ),
                   onProgressChanged: (value) {
                     setState(() {
                       _progress = value;
@@ -125,7 +131,7 @@ class _DemoPageState extends State<DemoPage> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Drag the divider, pinch to zoom, and double-tap to reset.',
+              'Drag divider, pinch to zoom, Ctrl/Cmd + wheel for desktop zoom, and double-tap to reset.',
             ),
           ],
         ),

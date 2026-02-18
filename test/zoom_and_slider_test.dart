@@ -412,7 +412,6 @@ void main() {
   group('Coordinate transformation tests', () {
     test('content to screen transformation is correct', () {
       // Test the math: screenX = (contentX - centerX) * zoom + centerX + panX
-      const size = Size(400, 300);
       const centerX = 200.0;
       const centerY = 150.0;
 
@@ -449,13 +448,12 @@ void main() {
     });
 
     test('screen to content transformation is correct (inverse)', () {
-      const size = Size(400, 300);
       const centerX = 200.0;
       const centerY = 150.0;
 
       // Inverse: contentX = (screenX - centerX - panX) / zoom + centerX
-      var zoom = 2.0;
-      var pan = const Offset(50, 25);
+      const zoom = 2.0;
+      const pan = Offset(50, 25);
       var screenPoint = const Offset(250, 175); // Where center appears
       var contentPoint = Offset(
         (screenPoint.dx - centerX - pan.dx) / zoom + centerX,

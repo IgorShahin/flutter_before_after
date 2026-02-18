@@ -12,6 +12,7 @@ any side-by-side state comparison UI.
 - Compare any two widgets with `BeforeAfter`
 - Smooth drag gesture and full divider-line hit area
 - Pinch-to-zoom and pan gestures
+- Desktop zoom with Ctrl/Cmd + wheel at cursor position
 - Double-tap to reset zoom
 - Custom overlay style (`OverlayStyle`) or fully custom overlay builder
 - Custom labels (`beforeLabelBuilder`, `afterLabelBuilder`)
@@ -114,6 +115,9 @@ controller.reset();
 - `onProgressChanged`, `onProgressStart`, `onProgressEnd`
 - `enableProgressWithTouch`
 - `enableZoom`
+- `gestureZoomSmoothing`
+- `zoomPanSensitivity`
+- `desktopZoom` (`DesktopZoomOptions`)
 - `fixedLabels`
 - `showLabels`
 - `contentOrder`
@@ -122,6 +126,22 @@ controller.reset();
 - `beforeLabelBuilder`, `afterLabelBuilder`
 - `overlay` (custom builder)
 - `zoomController`
+
+`desktopZoom.requiresModifier` uses platform-specific keys by default:
+- macOS: `Cmd`
+- Windows/Linux: `Ctrl`
+
+Example:
+```dart
+BeforeAfter(
+  beforeChild: ...,
+  afterChild: ...,
+  desktopZoom: const DesktopZoomOptions(
+    requiresModifier: true,
+    smoothing: 0.4,
+  ),
+)
+```
 
 ### Slider Drag Mode
 
