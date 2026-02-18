@@ -6,6 +6,7 @@ import 'content_order.dart';
 import 'default_overlay.dart';
 import 'labels.dart';
 import 'overlay_style.dart';
+import 'slider_drag_mode.dart';
 import 'zoom_controller.dart';
 
 /// A unified before/after comparison widget for arbitrary widgets.
@@ -27,6 +28,7 @@ class BeforeAfter extends StatefulWidget {
     this.afterLabelBuilder,
     this.overlay,
     this.zoomController,
+    this.sliderDragMode = SliderDragMode.fullOverlay,
     this.showLabels = true,
     this.fixedLabels = true,
     this.enableReverseZoomVisualEffect = false,
@@ -88,6 +90,9 @@ class BeforeAfter extends StatefulWidget {
 
   /// Controller for programmatic zoom/pan control.
   final ZoomController? zoomController;
+
+  /// Defines which part of overlay can start slider dragging.
+  final SliderDragMode sliderDragMode;
 
   /// Whether the "before/after" labels are shown.
   final bool showLabels;
@@ -187,13 +192,60 @@ class _BeforeAfterState extends State<BeforeAfter> {
   bool _isOnOverlayLine(
     Offset localPosition,
     double dividerScreenX,
+    double offsetY,
+    double visualHeight,
   ) {
     final thumbSize = widget.overlayStyle.thumbSize;
     final dividerWidth = widget.overlayStyle.dividerWidth;
     final hitHalfWidth =
         math.max(thumbSize / 2, math.max(dividerWidth * 2, 12));
     final dx = (localPosition.dx - dividerScreenX).abs();
-    return dx <= hitHalfWidth;
+    final withinVertical = localPosition.dy >= offsetY &&
+        localPosition.dy <= offsetY + visualHeight;
+    return dx <= hitHalfWidth && withinVertical;
+  }
+
+  bool _isOnThumb(
+    Offset localPosition,
+    double dividerScreenX,
+    double thumbCenterY,
+  ) {
+    final thumbSize = widget.overlayStyle.thumbSize;
+    final hitRadius = math.max(thumbSize / 2, 24.0);
+
+    final dx = (localPosition.dx - dividerScreenX).abs();
+    final dy = (localPosition.dy - thumbCenterY).abs();
+
+    if (widget.overlayStyle.thumbShape == BoxShape.circle) {
+      return math.sqrt(dx * dx + dy * dy) <= hitRadius;
+    }
+    return dx <= hitRadius && dy <= hitRadius;
+  }
+
+  bool _canStartSliderDrag(
+    Offset localPosition,
+    Size size,
+    double progress,
+  ) {
+    final geometry = _visualGeometry(size);
+    final dividerScreenX = geometry.offsetX + progress * geometry.width;
+    final thumbCenterY = widget.overlayStyle.verticalThumbMove
+        ? geometry.offsetY + geometry.height / 2
+        : geometry.offsetY +
+            geometry.height *
+                (widget.overlayStyle.thumbPositionPercent / 100.0);
+
+    switch (widget.sliderDragMode) {
+      case SliderDragMode.thumbOnly:
+        return _isOnThumb(localPosition, dividerScreenX, thumbCenterY);
+      case SliderDragMode.fullOverlay:
+        return _isOnOverlayLine(
+          localPosition,
+          dividerScreenX,
+          geometry.offsetY,
+          geometry.height,
+        );
+    }
   }
 
   double _screenToContentX(double screenX, Size size) {
@@ -386,8 +438,11 @@ class _BeforeAfterState extends State<BeforeAfter> {
     if (widget.enableProgressWithTouch && details.pointerCount == 1) {
       final size = context.size;
       if (size != null) {
-        final dividerScreenX = _progressNotifier.value * size.width;
-        if (_isOnOverlayLine(details.localFocalPoint, dividerScreenX)) {
+        if (_canStartSliderDrag(
+          details.localFocalPoint,
+          size,
+          _progressNotifier.value,
+        )) {
           _isDragging = true;
           widget.onProgressStart?.call(_progressNotifier.value);
         }

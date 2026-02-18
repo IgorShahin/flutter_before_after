@@ -17,6 +17,7 @@ any side-by-side state comparison UI.
 - Custom labels (`beforeLabelBuilder`, `afterLabelBuilder`)
 - Toggle labels visibility with `showLabels`
 - `fixedLabels` mode to keep labels static during zoom/pan
+- Select drag area with `sliderDragMode`
 - External `ZoomController` for programmatic control
 - Controlled/uncontrolled progress modes
 
@@ -116,10 +117,18 @@ controller.reset();
 - `fixedLabels`
 - `showLabels`
 - `contentOrder`
+- `sliderDragMode`
 - `overlayStyle`
 - `beforeLabelBuilder`, `afterLabelBuilder`
 - `overlay` (custom builder)
 - `zoomController`
+
+### Slider Drag Mode
+
+- `SliderDragMode.fullOverlay` (default)  
+  Drag starts from divider line or thumb.
+- `SliderDragMode.thumbOnly`  
+  Drag starts only from thumb/icon area.
 
 ### `fixedLabels` Behavior
 

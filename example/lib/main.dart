@@ -62,6 +62,7 @@ class _DemoPageState extends State<DemoPage> {
                   ),
                   progress: _progress,
                   // showLabels: false,
+                  sliderDragMode: SliderDragMode.thumbOnly,
                   onProgressChanged: (value) {
                     setState(() {
                       _progress = value;

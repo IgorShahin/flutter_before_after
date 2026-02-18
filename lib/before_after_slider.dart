@@ -35,4 +35,5 @@ library;
 export 'src/before_after.dart';
 export 'src/content_order.dart';
 export 'src/overlay_style.dart';
+export 'src/slider_drag_mode.dart';
 export 'src/zoom_controller.dart';
