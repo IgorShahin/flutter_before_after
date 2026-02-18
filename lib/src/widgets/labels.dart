@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'content_order.dart';
+import '../enums/content_order.dart';
 
 /// A label widget for the "Before" image.
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'slider_drag_mode.dart';
+import '../enums/slider_drag_mode.dart';
 import 'slider_hit_zone.dart';
 
 /// Grouped slider interaction configuration for [BeforeAfter].

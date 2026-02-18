@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'overlay_style.dart';
+import '../options/overlay_style.dart';
 
 /// Default overlay widget that displays a divider line and draggable thumb.
 class DefaultOverlay extends StatelessWidget {

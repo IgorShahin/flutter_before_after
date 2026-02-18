@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'label_behavior.dart';
+import '../enums/label_behavior.dart';
 
 /// Grouped labels configuration for [BeforeAfter].
 @immutable

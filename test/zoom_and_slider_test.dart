@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:before_after_slider/before_after_slider.dart';
-import 'package:before_after_slider/src/default_overlay.dart';
+import 'package:before_after_slider/src/widgets/default_overlay.dart';
 
 void main() {
   group('ZoomController', () {

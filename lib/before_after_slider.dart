@@ -33,13 +33,13 @@
 library;
 
 export 'src/before_after.dart';
-export 'src/before_after_interaction_options.dart';
-export 'src/before_after_labels_options.dart';
-export 'src/before_after_zoom_options.dart';
-export 'src/content_order.dart';
-export 'src/desktop_zoom_options.dart';
-export 'src/label_behavior.dart';
-export 'src/overlay_style.dart';
-export 'src/slider_drag_mode.dart';
-export 'src/slider_hit_zone.dart';
-export 'src/zoom_controller.dart';
+export 'src/controllers/zoom_controller.dart';
+export 'src/enums/content_order.dart';
+export 'src/enums/label_behavior.dart';
+export 'src/enums/slider_drag_mode.dart';
+export 'src/options/before_after_interaction_options.dart';
+export 'src/options/before_after_labels_options.dart';
+export 'src/options/before_after_zoom_options.dart';
+export 'src/options/desktop_zoom_options.dart';
+export 'src/options/overlay_style.dart';
+export 'src/options/slider_hit_zone.dart';

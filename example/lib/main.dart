@@ -40,9 +40,11 @@ class _DemoPageState extends State<DemoPage> {
     final pressed = HardwareKeyboard.instance.logicalKeysPressed;
     final isMac = Theme.of(context).platform == TargetPlatform.macOS;
     if (isMac) {
-      return pressed.contains(LogicalKeyboardKey.metaLeft) || pressed.contains(LogicalKeyboardKey.metaRight);
+      return pressed.contains(LogicalKeyboardKey.metaLeft) ||
+          pressed.contains(LogicalKeyboardKey.metaRight);
     }
-    return pressed.contains(LogicalKeyboardKey.controlLeft) || pressed.contains(LogicalKeyboardKey.controlRight);
+    return pressed.contains(LogicalKeyboardKey.controlLeft) ||
+        pressed.contains(LogicalKeyboardKey.controlRight);
   }
 
   @override
@@ -54,14 +56,15 @@ class _DemoPageState extends State<DemoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(title: const Text('Before/After Demo')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              physics: _lockPageScroll ? const NeverScrollableScrollPhysics() : const ClampingScrollPhysics(),
+              physics: _lockPageScroll
+                  ? const NeverScrollableScrollPhysics()
+                  : const ClampingScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
@@ -84,7 +87,9 @@ class _DemoPageState extends State<DemoPage> {
                             if (!_isInBeforeAfterZone) return;
                             // Wheel/Cmd zoom is resolved by BeforeAfter itself.
                             // Keep page scroll lock disabled here.
-                            if (event is PointerScrollEvent && !_isZoomModifierPressed() && _lockPageScroll) {
+                            if (event is PointerScrollEvent &&
+                                !_isZoomModifierPressed() &&
+                                _lockPageScroll) {
                               setState(() => _lockPageScroll = false);
                             }
                           },
@@ -125,7 +130,8 @@ class _DemoPageState extends State<DemoPage> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.black87.withValues(alpha: 0.85),
+                                    color:
+                                        Colors.black87.withValues(alpha: 0.85),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: const Text(
@@ -143,7 +149,8 @@ class _DemoPageState extends State<DemoPage> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.shade700.withValues(alpha: 0.85),
+                                    color: Colors.blue.shade700
+                                        .withValues(alpha: 0.85),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: const Text(
@@ -155,7 +162,8 @@ class _DemoPageState extends State<DemoPage> {
                                   ),
                                 ),
                               ),
-                              interactionOptions: const BeforeAfterInteractionOptions(
+                              interactionOptions:
+                                  const BeforeAfterInteractionOptions(
                                 sliderDragMode: SliderDragMode.fullOverlay,
                                 sliderHitZone: SliderHitZone(
                                   minLineHalfWidth: 18,
