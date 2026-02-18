@@ -38,4 +38,5 @@ export 'src/desktop_zoom_options.dart';
 export 'src/label_behavior.dart';
 export 'src/overlay_style.dart';
 export 'src/slider_drag_mode.dart';
+export 'src/slider_hit_zone.dart';
 export 'src/zoom_controller.dart';

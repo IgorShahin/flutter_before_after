@@ -12,6 +12,7 @@ import 'label_behavior.dart';
 import 'labels.dart';
 import 'overlay_style.dart';
 import 'slider_drag_mode.dart';
+import 'slider_hit_zone.dart';
 import 'zoom_controller.dart';
 
 /// A unified before/after comparison widget for arbitrary widgets.
@@ -27,7 +28,11 @@ class BeforeAfter extends StatefulWidget {
     this.onProgressEnd,
     this.enableProgressWithTouch = true,
     this.enableZoom = true,
-    this.gestureZoomSmoothing = 0.7,
+    this.enableDoubleTapZoomToggle = true,
+    this.doubleTapZoomScale = 3.0,
+    this.doubleTapZoomDuration = const Duration(milliseconds: 420),
+    this.doubleTapZoomCurve = Curves.easeInOutCubic,
+    this.gestureZoomSmoothing = 1.0,
     this.zoomPanSensitivity = 1.0,
     this.contentOrder = ContentOrder.beforeAfter,
     this.overlayStyle = const OverlayStyle(),
@@ -36,6 +41,7 @@ class BeforeAfter extends StatefulWidget {
     this.overlay,
     this.zoomController,
     this.sliderDragMode = SliderDragMode.fullOverlay,
+    this.sliderHitZone = const SliderHitZone(),
     this.showLabels = true,
     this.labelBehavior,
     @Deprecated('Use labelBehavior instead.') this.fixedLabels = true,
@@ -63,6 +69,10 @@ class BeforeAfter extends StatefulWidget {
         assert(
           gestureZoomSmoothing > 0.0 && gestureZoomSmoothing <= 1.0,
           'gestureZoomSmoothing must be in (0.0, 1.0]',
+        ),
+        assert(
+          doubleTapZoomScale >= 1.0,
+          'doubleTapZoomScale must be >= 1.0',
         );
 
   /// The "before" widget to display.
@@ -89,6 +99,18 @@ class BeforeAfter extends StatefulWidget {
 
   /// Whether pinch-to-zoom is enabled.
   final bool enableZoom;
+
+  /// Enables double-tap zoom toggle animation.
+  final bool enableDoubleTapZoomToggle;
+
+  /// Target zoom used on double-tap from base zoom.
+  final double doubleTapZoomScale;
+
+  /// Animation duration for double-tap zoom toggle.
+  final Duration doubleTapZoomDuration;
+
+  /// Animation curve for double-tap zoom toggle.
+  final Curve doubleTapZoomCurve;
 
   /// Smoothing factor for pinch gesture zoom.
   ///
@@ -120,6 +142,9 @@ class BeforeAfter extends StatefulWidget {
 
   /// Defines which part of overlay can start slider dragging.
   final SliderDragMode sliderDragMode;
+
+  /// Hit/capture zone settings for slider interactions.
+  final SliderHitZone sliderHitZone;
 
   /// Whether the "before/after" labels are shown.
   final bool showLabels;
@@ -166,6 +191,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
   int _lastPointerCount = 0;
   double _lastTrackpadScale = 1.0;
   bool _isPrimaryPointerDown = false;
+  Offset? _lastDoubleTapFocalPoint;
 
   double _containerVisualScaleTarget = 1.0;
 
@@ -253,7 +279,14 @@ class _BeforeAfterState extends State<BeforeAfter> {
                   onScaleStart: _onScaleStart,
                   onScaleUpdate: (details) => _onScaleUpdate(details, fullSize),
                   onScaleEnd: _onScaleEnd,
-                  onDoubleTap: widget.enableZoom ? _onDoubleTap : null,
+                  onDoubleTapDown:
+                      widget.enableZoom && widget.enableDoubleTapZoomToggle
+                          ? _onDoubleTapDown
+                          : null,
+                  onDoubleTap:
+                      widget.enableZoom && widget.enableDoubleTapZoomToggle
+                          ? () => _onDoubleTap(fullSize)
+                          : null,
                   child: Listener(
                     onPointerDown: _onPointerDown,
                     onPointerUp: _onPointerUp,
@@ -347,16 +380,31 @@ class _BeforeAfterState extends State<BeforeAfter> {
         ? visual.offsetY + visual.height / 2
         : visual.offsetY +
             visual.height * (widget.overlayStyle.thumbPositionPercent / 100.0);
+    final zoom = _zoomController.effectiveZoom;
 
     switch (widget.sliderDragMode) {
       case SliderDragMode.thumbOnly:
-        return _isOnThumb(localPosition, dividerScreenX, thumbCenterY);
+        if (_isOnThumb(localPosition, dividerScreenX, thumbCenterY, zoom)) {
+          return true;
+        }
+        // While zoomed-in, make slider capture more forgiving to reduce
+        // accidental pan-starts when user aims at the divider area.
+        return widget.sliderHitZone.allowLineFallbackWhenThumbOnlyZoomed &&
+            zoom > 1.001 &&
+            _isOnOverlayLine(
+              localPosition,
+              dividerScreenX,
+              visual.offsetY,
+              visual.height,
+              zoom,
+            );
       case SliderDragMode.fullOverlay:
         return _isOnOverlayLine(
           localPosition,
           dividerScreenX,
           visual.offsetY,
           visual.height,
+          zoom,
         );
     }
   }
@@ -366,14 +414,23 @@ class _BeforeAfterState extends State<BeforeAfter> {
     double dividerScreenX,
     double offsetY,
     double visualHeight,
+    double zoom,
   ) {
     final thumbSize = widget.overlayStyle.thumbSize;
     final dividerWidth = widget.overlayStyle.dividerWidth;
-    final hitHalfWidth =
-        math.max(thumbSize / 2, math.max(dividerWidth * 2, 12));
+    final zone = widget.sliderHitZone;
+    final zoomBoost =
+        ((zoom - 1.0).clamp(0.0, double.infinity) * zone.zoomBoostPerStep)
+            .clamp(0.0, zone.maxZoomBoost);
+    final hitHalfWidth = math.max(
+          thumbSize / 2,
+          math.max(dividerWidth * 2, zone.minLineHalfWidth),
+        ) +
+        zoomBoost;
     final dx = (localPosition.dx - dividerScreenX).abs();
-    final withinVertical = localPosition.dy >= offsetY &&
-        localPosition.dy <= offsetY + visualHeight;
+    final verticalPadding = zone.verticalPadding + zoomBoost * 0.5;
+    final withinVertical = localPosition.dy >= offsetY - verticalPadding &&
+        localPosition.dy <= offsetY + visualHeight + verticalPadding;
     return dx <= hitHalfWidth && withinVertical;
   }
 
@@ -381,9 +438,14 @@ class _BeforeAfterState extends State<BeforeAfter> {
     Offset localPosition,
     double dividerScreenX,
     double thumbCenterY,
+    double zoom,
   ) {
     final thumbSize = widget.overlayStyle.thumbSize;
-    final hitRadius = math.max(thumbSize / 2, 24.0);
+    final zone = widget.sliderHitZone;
+    final zoomBoost =
+        ((zoom - 1.0).clamp(0.0, double.infinity) * zone.zoomBoostPerStep)
+            .clamp(0.0, zone.maxZoomBoost);
+    final hitRadius = math.max(thumbSize / 2, zone.minThumbRadius) + zoomBoost;
 
     final dx = (localPosition.dx - dividerScreenX).abs();
     final dy = (localPosition.dy - thumbCenterY).abs();
@@ -412,6 +474,21 @@ class _BeforeAfterState extends State<BeforeAfter> {
 
   void _onScaleUpdate(ScaleUpdateDetails details, Size fullSize) {
     if (_isDragging) {
+      _updateProgress(details.localFocalPoint.dx, fullSize);
+      return;
+    }
+
+    if (widget.enableProgressWithTouch &&
+        widget.sliderDragMode == SliderDragMode.fullOverlay &&
+        details.pointerCount == 1 &&
+        _zoomController.effectiveZoom > 1.001 &&
+        _canStartSliderDrag(
+          details.localFocalPoint,
+          fullSize,
+          _progressNotifier.value,
+        )) {
+      _isDragging = true;
+      widget.onProgressStart?.call(_progressNotifier.value);
       _updateProgress(details.localFocalPoint.dx, fullSize);
       return;
     }
@@ -497,8 +574,20 @@ class _BeforeAfterState extends State<BeforeAfter> {
     _lastPointerCount = 0;
   }
 
-  void _onDoubleTap() {
-    _zoomController.reset();
+  void _onDoubleTapDown(TapDownDetails details) {
+    _lastDoubleTapFocalPoint = details.localPosition;
+  }
+
+  void _onDoubleTap(Size fullSize) {
+    final focalPoint = _lastDoubleTapFocalPoint ??
+        Offset(fullSize.width / 2, fullSize.height / 2);
+    _zoomController.toggleDoubleTapZoom(
+      containerSize: fullSize,
+      focalPoint: focalPoint,
+      targetZoom: widget.doubleTapZoomScale,
+      duration: widget.doubleTapZoomDuration,
+      curve: widget.doubleTapZoomCurve,
+    );
   }
 
   void _onPointerSignal(PointerSignalEvent event, Size fullSize) {
@@ -762,70 +851,75 @@ class _BeforeAfterScene extends StatelessWidget {
         : 0.0;
     final radius = reverseZoomEffectBorderRadius;
 
-    return ClipRect(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Center(
-            child: SizedBox(
-              width: visual.width,
-              height: visual.height,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(radius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: shadowAlpha),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(radius),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      zoomableContent,
-                      RepaintBoundary(child: overlay),
-                      if (showLabels && isAttachedLabels)
-                        Positioned.fill(
-                          child: ClipRect(
-                            clipper: _LeftRectClipper(dividerScreenX),
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: sideContent.leftLabel,
-                            ),
-                          ),
-                        ),
-                      if (showLabels && isAttachedLabels)
-                        Positioned.fill(
-                          child: ClipRect(
-                            clipper: _RightRectClipper(dividerScreenX),
-                            child: Align(
-                              alignment: Alignment.topRight,
-                              child: sideContent.rightLabel,
-                            ),
-                          ),
-                        ),
-                      if (showLabels && isStaticLabels)
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: sideContent.leftLabel,
-                        ),
-                      if (showLabels && isStaticLabels)
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: sideContent.rightLabel,
-                        ),
-                    ],
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        Center(
+          child: SizedBox(
+            width: visual.width,
+            height: visual.height,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: shadowAlpha),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
                   ),
-                ),
+                ],
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                clipBehavior: Clip.none,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(radius),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        zoomableContent,
+                        if (showLabels && isAttachedLabels)
+                          Positioned.fill(
+                            child: ClipRect(
+                              clipper: _LeftRectClipper(dividerScreenX),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: sideContent.leftLabel,
+                              ),
+                            ),
+                          ),
+                        if (showLabels && isAttachedLabels)
+                          Positioned.fill(
+                            child: ClipRect(
+                              clipper: _RightRectClipper(dividerScreenX),
+                              child: Align(
+                                alignment: Alignment.topRight,
+                                child: sideContent.rightLabel,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  RepaintBoundary(child: overlay),
+                  if (showLabels && isStaticLabels)
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: sideContent.leftLabel,
+                    ),
+                  if (showLabels && isStaticLabels)
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: sideContent.rightLabel,
+                    ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

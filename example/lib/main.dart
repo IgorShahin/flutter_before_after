@@ -56,6 +56,7 @@ class _DemoPageState extends State<DemoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(title: const Text('Before/After Demo')),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -123,7 +124,10 @@ class _DemoPageState extends State<DemoPage> {
                               // showLabels: false,
                               labelBehavior: LabelBehavior.attachedToContent,
                               sliderDragMode: SliderDragMode.thumbOnly,
-                              // gestureZoomSmoothing: 0.45,
+                              sliderHitZone: const SliderHitZone(
+                                minLineHalfWidth: 18,
+                                minThumbRadius: 30,
+                              ),
                               zoomPanSensitivity: 0.95,
                               desktopZoom: const DesktopZoomOptions(
                                 requiresModifier: true,

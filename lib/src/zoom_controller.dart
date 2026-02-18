@@ -12,7 +12,7 @@ class ZoomController extends ChangeNotifier {
     Offset initialPan = Offset.zero,
     double initialRotation = 0.0,
     this.minZoom = 1.0,
-    this.maxZoom = 5.0,
+    this.maxZoom = 15.0,
     this.zoomEnabled = true,
     this.panEnabled = true,
     this.rotationEnabled = false,
@@ -61,6 +61,7 @@ class ZoomController extends ChangeNotifier {
   double _rotation;
   Size? _lastContainerSize;
   Timer? _reboundTimer;
+  Timer? _transitionTimer;
 
   /// Current zoom level.
   double get zoom => _zoom;
@@ -116,7 +117,7 @@ class ZoomController extends ChangeNotifier {
     final oldRotation = _rotation;
 
     _lastContainerSize = containerSize;
-    _reboundTimer?.cancel();
+    _cancelTransientAnimations();
     final previousEffectiveZoom = _effectiveZoom;
 
     if (zoomEnabled) {
@@ -226,7 +227,7 @@ class ZoomController extends ChangeNotifier {
     }
     if (smoothing <= 0.0 || smoothing > 1.0) return;
 
-    _reboundTimer?.cancel();
+    _cancelTransientAnimations();
     final previousEffectiveZoom = _effectiveZoom;
     final rawDesiredZoom = previousEffectiveZoom * zoomScaleFactor;
     final desiredZoom = previousEffectiveZoom +
@@ -268,7 +269,7 @@ class ZoomController extends ChangeNotifier {
 
   /// Resets zoom, pan, and rotation to their initial values.
   void reset() {
-    _reboundTimer?.cancel();
+    _cancelTransientAnimations();
     _zoom = 1.0;
     _zoomOvershoot = 0.0;
     _pan = Offset.zero;
@@ -276,9 +277,109 @@ class ZoomController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Smoothly animates to target zoom/pan state.
+  void animateTo({
+    required Size containerSize,
+    required double targetZoom,
+    Offset? targetPan,
+    Offset? focalPoint,
+    Duration duration = const Duration(milliseconds: 420),
+    Curve curve = Curves.easeInOutCubic,
+  }) {
+    if (!zoomEnabled) return;
+
+    _lastContainerSize = containerSize;
+    _cancelTransientAnimations();
+
+    final startZoom = _effectiveZoom.clamp(minZoom, maxZoom);
+    final endZoom = targetZoom.clamp(minZoom, maxZoom);
+    final startPan = _pan;
+
+    final resolvedTargetPan = targetPan ??
+        (() {
+          if (focalPoint == null) return _pan;
+          final center =
+              Offset(containerSize.width / 2, containerSize.height / 2);
+          final worldPoint = (focalPoint - center - _pan) / startZoom;
+          return focalPoint - center - worldPoint * endZoom;
+        })();
+
+    if (duration <= Duration.zero) {
+      _zoom = endZoom;
+      _zoomOvershoot = 0.0;
+      _pan = resolvedTargetPan;
+      _clampPanToBounds();
+      notifyListeners();
+      return;
+    }
+
+    const tickMs = 16;
+    final totalTicks = (duration.inMilliseconds / tickMs).ceil().clamp(1, 240);
+    var tick = 0;
+
+    _transitionTimer = Timer.periodic(const Duration(milliseconds: tickMs), (
+      timer,
+    ) {
+      final oldZoom = _zoom;
+      final oldPan = _pan;
+      final oldOvershoot = _zoomOvershoot;
+
+      tick++;
+      final t = (tick / totalTicks).clamp(0.0, 1.0);
+      final eased = curve.transform(t);
+      _zoom = startZoom + (endZoom - startZoom) * eased;
+      _zoomOvershoot = 0.0;
+      _pan =
+          Offset.lerp(startPan, resolvedTargetPan, eased) ?? resolvedTargetPan;
+      _clampPanToBounds();
+
+      if (oldZoom != _zoom ||
+          oldPan != _pan ||
+          oldOvershoot != _zoomOvershoot) {
+        notifyListeners();
+      }
+
+      if (t >= 1.0) {
+        timer.cancel();
+      }
+    });
+  }
+
+  /// Double-tap style toggle:
+  /// base zoom -> [targetZoom] around [focalPoint], zoomed -> base reset.
+  void toggleDoubleTapZoom({
+    required Size containerSize,
+    required Offset focalPoint,
+    double targetZoom = 3.0,
+    Duration duration = const Duration(milliseconds: 420),
+    Curve curve = Curves.easeInOutCubic,
+    double baseThreshold = 0.02,
+  }) {
+    final atBase = (_effectiveZoom - minZoom).abs() <= baseThreshold;
+    if (atBase) {
+      animateTo(
+        containerSize: containerSize,
+        targetZoom: targetZoom,
+        focalPoint: focalPoint,
+        duration: duration,
+        curve: curve,
+      );
+      return;
+    }
+
+    animateTo(
+      containerSize: containerSize,
+      targetZoom: minZoom,
+      targetPan: Offset.zero,
+      duration: duration,
+      curve: curve,
+    );
+  }
+
   /// Call on gesture end to spring overshoot back to max zoom.
   void onGestureEnd() {
     if (_zoomOvershoot <= 0) return;
+    _transitionTimer?.cancel();
     _reboundTimer?.cancel();
 
     final start = _zoomOvershoot;
@@ -314,6 +415,11 @@ class ZoomController extends ChangeNotifier {
     });
   }
 
+  void _cancelTransientAnimations() {
+    _transitionTimer?.cancel();
+    _reboundTimer?.cancel();
+  }
+
   void _clampPanToBounds() {
     if (!boundPan || !panEnabled) return;
     final size = _lastContainerSize;
@@ -345,7 +451,7 @@ class ZoomController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _reboundTimer?.cancel();
+    _cancelTransientAnimations();
     super.dispose();
   }
 }

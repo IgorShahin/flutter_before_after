@@ -6,11 +6,11 @@ class DesktopZoomOptions {
   const DesktopZoomOptions({
     this.enabled = true,
     this.requiresModifier = true,
-    this.sensitivity = 0.0018,
+    this.sensitivity = 0.0036,
     this.smoothing = 0.55,
     this.mouseSensitivityMultiplier = 7.0,
     this.mouseMinStep = 10.0,
-    this.panToZoomSensitivity = 5.0,
+    this.panToZoomSensitivity = 10.0,
     this.panToZoomMinStep = 8.0,
   })  : assert(sensitivity > 0.0, 'sensitivity must be > 0.0'),
         assert(

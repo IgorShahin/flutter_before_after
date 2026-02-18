@@ -249,10 +249,39 @@ void main() {
       await tester.tap(find.byType(BeforeAfter));
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tap(find.byType(BeforeAfter));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 520));
 
       expect(zoomController.zoom, 1.0);
       expect(zoomController.pan, Offset.zero);
+    });
+
+    testWidgets('double tap from base zoom smoothly zooms in', (tester) async {
+      final zoomController = ZoomController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 300,
+              child: BeforeAfter(
+                beforeChild: const ColoredBox(color: Colors.red),
+                afterChild: const ColoredBox(color: Colors.blue),
+                zoomController: zoomController,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(zoomController.zoom, 1.0);
+
+      await tester.tap(find.byType(BeforeAfter));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.byType(BeforeAfter));
+      await tester.pump(const Duration(milliseconds: 520));
+
+      expect(zoomController.zoom, 3.0);
     });
 
     testWidgets(
