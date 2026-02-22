@@ -88,6 +88,27 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     );
   }
 
+  _VisualGeometry _currentVisualGeometry(Size fullSize) {
+    final visualScale = _hasContainerVisualScaleEffect
+        ? _containerVisualScaleTarget.clamp(
+            _minContainerVisualScale,
+            _maxContainerVisualScale,
+          )
+        : 1.0;
+    return _visualGeometry(fullSize, visualScale);
+  }
+
+  Size _zoomViewportSize(_VisualGeometry visual, Size fallback) {
+    if (visual.width <= 0 || visual.height <= 0) return fallback;
+    return Size(visual.width, visual.height);
+  }
+
+  Offset _toZoomViewportFocal(Offset localPosition, _VisualGeometry visual) {
+    final dx = (localPosition.dx - visual.offsetX).clamp(0.0, visual.width);
+    final dy = (localPosition.dy - visual.offsetY).clamp(0.0, visual.height);
+    return Offset(dx, dy);
+  }
+
   void _updateProgress(double screenX, Size fullSize) {
     final visualScale = _hasContainerVisualScaleEffect
         ? _containerVisualScaleTarget.clamp(
@@ -216,7 +237,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     if (_isZoomEnabled &&
         _zoomController.zoom > 1.0 &&
         details.pointerCount == 1) {
-      if (_isDesktopLike && !_gesture.isPrimaryPointerDown) {
+      if (_isDesktopLike && !_isPrimaryPointerDownNotifier.value) {
         _gesture.lastPointerCount = details.pointerCount;
         return;
       }
@@ -245,10 +266,13 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
         1.0 + (rawZoomDelta - 1.0) * _effectiveGestureZoomSmoothing;
     final zoomDelta =
         (smoothedZoomDelta - 1.0).abs() < 0.0015 ? 1.0 : smoothedZoomDelta;
+    final visual = _currentVisualGeometry(fullSize);
+    final zoomViewportSize = _zoomViewportSize(visual, fullSize);
+    final focalPoint = _toZoomViewportFocal(details.localFocalPoint, visual);
 
     _zoomController.applyDesktopZoomPan(
-      containerSize: fullSize,
-      focalPoint: details.localFocalPoint,
+      containerSize: zoomViewportSize,
+      focalPoint: focalPoint,
       zoomScaleFactor: zoomDelta,
       panDelta: panDelta,
       allowOvershoot: true,
@@ -270,8 +294,10 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     final rawPanDelta = details.localFocalPoint -
         (_gesture.lastFocalPoint ?? details.localFocalPoint);
     final panDelta = rawPanDelta * _effectiveZoomPanSensitivity;
+    final visual = _currentVisualGeometry(fullSize);
+    final zoomViewportSize = _zoomViewportSize(visual, fullSize);
     _zoomController.updateFromGesture(
-      containerSize: fullSize,
+      containerSize: zoomViewportSize,
       panDelta: panDelta,
     );
 
@@ -295,10 +321,14 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
   }
 
   void _onDoubleTap(Size fullSize) {
-    final focalPoint = _gesture.lastDoubleTapFocalPoint ??
-        Offset(fullSize.width / 2, fullSize.height / 2);
+    final visual = _currentVisualGeometry(fullSize);
+    final zoomViewportSize = _zoomViewportSize(visual, fullSize);
+    final fallbackFocal =
+        Offset(visual.offsetX + visual.width / 2, visual.offsetY + visual.height / 2);
+    final rawFocalPoint = _gesture.lastDoubleTapFocalPoint ?? fallbackFocal;
+    final focalPoint = _toZoomViewportFocal(rawFocalPoint, visual);
     _zoomController.toggleDoubleTapZoom(
-      containerSize: fullSize,
+      containerSize: zoomViewportSize,
       focalPoint: focalPoint,
       targetZoom: _effectiveDoubleTapZoomScale,
       duration: _effectiveDoubleTapZoomDuration,
@@ -339,9 +369,12 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
             kIsWeb ? sensitivity * _webPointerZoomBoost : sensitivity;
 
         final factor = math.exp(-effectiveDelta * normalizedSensitivity);
+        final visual = _currentVisualGeometry(fullSize);
+        final zoomViewportSize = _zoomViewportSize(visual, fullSize);
+        final focalPoint = _toZoomViewportFocal(scrollEvent.localPosition, visual);
         _zoomController.applyDesktopZoomPan(
-          containerSize: fullSize,
-          focalPoint: scrollEvent.localPosition,
+          containerSize: zoomViewportSize,
+          focalPoint: focalPoint,
           zoomScaleFactor: factor,
           panDelta: Offset.zero,
           allowOvershoot: false,
@@ -357,8 +390,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     if (event.kind == PointerDeviceKind.mouse) {
       final isDown = event.buttons == kPrimaryButton ||
           (event.buttons & kPrimaryButton) != 0;
-      if (_gesture.isPrimaryPointerDown != isDown) {
-        _gesture.isPrimaryPointerDown = isDown;
+      if (_isPrimaryPointerDownNotifier.value != isDown) {
         _isPrimaryPointerDownNotifier.value = isDown;
       }
     }
@@ -366,8 +398,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
 
   void _onPointerUp(PointerUpEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
-      if (_gesture.isPrimaryPointerDown) {
-        _gesture.isPrimaryPointerDown = false;
+      if (_isPrimaryPointerDownNotifier.value) {
         _isPrimaryPointerDownNotifier.value = false;
       }
     }
@@ -375,8 +406,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
 
   void _onPointerCancel(PointerCancelEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
-      if (_gesture.isPrimaryPointerDown) {
-        _gesture.isPrimaryPointerDown = false;
+      if (_isPrimaryPointerDownNotifier.value) {
         _isPrimaryPointerDownNotifier.value = false;
       }
     }
@@ -413,10 +443,13 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     }
 
     if ((zoomDelta - 1.0).abs() <= 0.0001) return;
+    final visual = _currentVisualGeometry(fullSize);
+    final zoomViewportSize = _zoomViewportSize(visual, fullSize);
+    final focalPoint = _toZoomViewportFocal(event.localPosition, visual);
 
     _zoomController.applyDesktopZoomPan(
-      containerSize: fullSize,
-      focalPoint: event.localPosition,
+      containerSize: zoomViewportSize,
+      focalPoint: focalPoint,
       zoomScaleFactor: zoomDelta,
       panDelta: panDelta,
       allowOvershoot: true,

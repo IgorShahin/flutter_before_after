@@ -6,7 +6,6 @@ class _GestureSessionState {
   double? lastScale;
   int lastPointerCount = 0;
   double lastTrackpadScale = 1.0;
-  bool isPrimaryPointerDown = false;
   Offset? lastDoubleTapFocalPoint;
 
   void resetAfterScaleEnd() {

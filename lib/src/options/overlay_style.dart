@@ -10,7 +10,7 @@ class OverlayStyle {
     this.thumbBackgroundColor = Colors.white,
     this.thumbIconColor = Colors.grey,
     this.thumbSize = 36.0,
-    this.thumbElevation = 2.0,
+    this.thumbElevation = 0.0,
     this.thumbIcon = Icons.swap_horiz,
     this.thumbShape = BoxShape.circle,
     this.verticalThumbMove = false,

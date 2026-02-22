@@ -91,11 +91,6 @@ class _BeforeAfterScene extends StatelessWidget {
           style: overlayStyle,
         );
 
-    final shrinkStrength =
-        (1.0 - visual.width / fullSize.width).clamp(0.0, 1.0);
-    final shadowAlpha = enableReverseZoomVisualEffect
-        ? (0.05 + shrinkStrength * 0.18).clamp(0.0, 0.3)
-        : 0.0;
     final radius = reverseZoomEffectBorderRadius;
 
     return Stack(
@@ -115,13 +110,6 @@ class _BeforeAfterScene extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(radius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: shadowAlpha),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
                   ),
                   child: Stack(
                     fit: StackFit.expand,

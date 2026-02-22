@@ -136,6 +136,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
   late final ValueNotifier<double> _progressNotifier;
   late final ValueNotifier<double> _containerVisualScaleTargetNotifier;
   late final ValueNotifier<bool> _isPrimaryPointerDownNotifier;
+  late Listenable _cursorListenable;
 
   late ZoomController _zoomController;
   bool _ownsZoomController = false;
@@ -151,6 +152,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
     _containerVisualScaleTargetNotifier = ValueNotifier<double>(1.0);
     _isPrimaryPointerDownNotifier = ValueNotifier<bool>(false);
     _initZoomController();
+    _rebuildCursorListenable();
     _zoomController.addListener(_onZoomControllerChanged);
   }
 
@@ -166,6 +168,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
         _zoomController.dispose();
       }
       _initZoomController();
+      _rebuildCursorListenable();
       _zoomController.addListener(_onZoomControllerChanged);
     }
   }
@@ -191,6 +194,12 @@ class _BeforeAfterState extends State<BeforeAfter> {
       _zoomController = runtime.createController();
       _ownsZoomController = true;
     }
+  }
+
+  void _rebuildCursorListenable() {
+    _cursorListenable = Listenable.merge(
+      [_zoomController, _isPrimaryPointerDownNotifier],
+    );
   }
 
   double get _containerVisualScaleTarget =>
@@ -284,9 +293,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
 
               final sceneWithCursor = _isDesktopLike && _effectiveShowPointerCursor
                   ? AnimatedBuilder(
-                      animation: Listenable.merge(
-                        [_zoomController, _isPrimaryPointerDownNotifier],
-                      ),
+                      animation: _cursorListenable,
                       child: pointerLayer,
                       builder: (context, child) {
                         final canPanZoomedContent = _isZoomEnabled &&

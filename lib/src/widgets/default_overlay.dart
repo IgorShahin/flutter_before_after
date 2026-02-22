@@ -45,13 +45,6 @@ class DefaultOverlay extends StatelessWidget {
               width: style.dividerWidth,
               decoration: BoxDecoration(
                 color: style.dividerColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
               ),
             ),
           ),
@@ -64,13 +57,15 @@ class DefaultOverlay extends StatelessWidget {
               decoration: BoxDecoration(
                 color: style.thumbBackgroundColor,
                 shape: style.thumbShape,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: style.thumbElevation * 2,
-                    offset: Offset(0, style.thumbElevation),
-                  ),
-                ],
+                boxShadow: style.thumbElevation > 0
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: style.thumbElevation * 2,
+                          offset: Offset(0, style.thumbElevation),
+                        ),
+                      ]
+                    : null,
               ),
               child: Icon(
                 style.thumbIcon,
