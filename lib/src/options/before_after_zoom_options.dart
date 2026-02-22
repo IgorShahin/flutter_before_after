@@ -23,6 +23,10 @@ class BeforeAfterZoomOptions {
     this.enableContainerScaleOnZoom = false,
     this.containerScaleMax = 1.12,
     this.containerScaleZoomRange = 2.0,
+    this.enableReverseZoomVisualEffect = false,
+    this.reverseZoomMinScale = 0.92,
+    this.reverseZoomMaxShrink = 0.18,
+    this.reverseZoomEffectBorderRadius = 0.0,
   })  : assert(
           gestureZoomSmoothing > 0.0 && gestureZoomSmoothing <= 1.0,
           'gestureZoomSmoothing must be in (0.0, 1.0]',
@@ -42,6 +46,18 @@ class BeforeAfterZoomOptions {
         assert(
           containerScaleZoomRange > 0.0,
           'containerScaleZoomRange must be > 0.0',
+        ),
+        assert(
+          reverseZoomMinScale > 0.0 && reverseZoomMinScale <= 1.0,
+          'reverseZoomMinScale must be in (0.0, 1.0]',
+        ),
+        assert(
+          reverseZoomMaxShrink >= 0.0 && reverseZoomMaxShrink <= 0.4,
+          'reverseZoomMaxShrink must be in [0.0, 0.4]',
+        ),
+        assert(
+          reverseZoomEffectBorderRadius >= 0.0,
+          'reverseZoomEffectBorderRadius must be >= 0.0',
         );
 
   final bool enabled;
@@ -60,4 +76,8 @@ class BeforeAfterZoomOptions {
   final bool enableContainerScaleOnZoom;
   final double containerScaleMax;
   final double containerScaleZoomRange;
+  final bool enableReverseZoomVisualEffect;
+  final double reverseZoomMinScale;
+  final double reverseZoomMaxShrink;
+  final double reverseZoomEffectBorderRadius;
 }

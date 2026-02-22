@@ -111,13 +111,13 @@ class _DemoPageState extends State<DemoPage> {
                   enableContainerScaleOnZoom: true,
                   containerScaleMax: 1.55,
                   containerScaleZoomRange: 0.9,
+                  enableReverseZoomVisualEffect: true,
+                  reverseZoomEffectBorderRadius: 12,
                   pointer: PointerZoomOptions(
                     requiresModifier: true,
                     smoothing: 0.4,
                   ),
                 ),
-                enableReverseZoomVisualEffect: true,
-                reverseZoomEffectBorderRadius: 12,
                 onProgressChanged: (value) {
                   setState(() {
                     _progress = value;

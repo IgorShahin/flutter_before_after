@@ -459,7 +459,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
   }
 
   void _updateContainerVisualScaleEffect(double gestureScale) {
-    final enableReverse = widget.enableReverseZoomVisualEffect;
+    final enableReverse = _effectiveEnableReverseZoomVisualEffect;
     final enableGrow = _effectiveEnableContainerScaleOnZoom;
     if (!enableReverse && !enableGrow) return;
 
@@ -472,7 +472,8 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
       final effectStrength = Curves.easeOutCubic.transform(
         (1.0 - gestureScale).clamp(0.0, 1.0),
       );
-      nextScale = (1.0 - effectStrength * widget.reverseZoomMaxShrink).clamp(widget.reverseZoomMinScale, 1.0);
+      nextScale = (1.0 - effectStrength * _effectiveReverseZoomMaxShrink)
+          .clamp(_effectiveReverseZoomMinScale, 1.0);
     }
 
     final smoothed = _containerVisualScaleTarget + (nextScale - _containerVisualScaleTarget) * 0.18;

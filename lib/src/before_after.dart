@@ -51,23 +51,7 @@ class BeforeAfter extends StatefulWidget {
     this.labelsOptions = const BeforeAfterLabelsOptions(),
     this.overlay,
     this.zoomController,
-    this.enableReverseZoomVisualEffect = false,
-    this.reverseZoomMinScale = 0.92,
-    this.reverseZoomMaxShrink = 0.18,
-    this.reverseZoomEffectBorderRadius = 0.0,
-  })  : assert(
-          reverseZoomMinScale > 0 && reverseZoomMinScale <= 1.0,
-          'reverseZoomMinScale must be in (0.0, 1.0]',
-        ),
-        assert(
-          reverseZoomMaxShrink >= 0.0 && reverseZoomMaxShrink <= 0.4,
-          'reverseZoomMaxShrink must be in [0.0, 0.4]',
-        ),
-        assert(
-          reverseZoomEffectBorderRadius >= 0.0,
-          'reverseZoomEffectBorderRadius must be >= 0.0',
-        ),
-        assert(
+  }) : assert(
           viewportAspectRatio == null || viewportAspectRatio > 0.0,
           'viewportAspectRatio must be > 0.0',
         );
@@ -118,20 +102,6 @@ class BeforeAfter extends StatefulWidget {
 
   /// Controller for programmatic zoom/pan control.
   final ZoomController? zoomController;
-
-  /// Adds a visual "container shrink" effect while zooming out.
-  ///
-  /// This only affects rendering feedback and does not change actual zoom math.
-  final bool enableReverseZoomVisualEffect;
-
-  /// Minimum visual scale used by [enableReverseZoomVisualEffect].
-  final double reverseZoomMinScale;
-
-  /// Maximum visual shrink amount used by [enableReverseZoomVisualEffect].
-  final double reverseZoomMaxShrink;
-
-  /// Corner radius for the visual reverse zoom container.
-  final double reverseZoomEffectBorderRadius;
 
   @override
   State<BeforeAfter> createState() => _BeforeAfterState();
@@ -292,7 +262,8 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 enableZoom: _isZoomEnabled,
                 showLabels: _effectiveShowLabels,
                 labelBehavior: _effectiveLabelBehavior,
-                reverseZoomEffectBorderRadius: widget.reverseZoomEffectBorderRadius,
+                reverseZoomEffectBorderRadius:
+                    _effectiveReverseZoomEffectBorderRadius,
                 overlayBuilder: widget.overlay,
                 overlayStyle: widget.overlayStyle,
                 zoomController: _zoomController,
