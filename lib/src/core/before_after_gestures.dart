@@ -208,21 +208,6 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
       return;
     }
 
-    if (_effectiveEnableProgressWithTouch &&
-        _effectiveSliderDragMode == SliderDragMode.fullOverlay &&
-        details.pointerCount == 1 &&
-        _zoomController.effectiveZoom > 1.001 &&
-        _canStartSliderDrag(
-          details.localFocalPoint,
-          fullSize,
-          _progressNotifier.value,
-        )) {
-      _gesture.isDragging = true;
-      widget.onProgressStart?.call(_progressNotifier.value);
-      _updateProgress(details.localFocalPoint.dx, fullSize);
-      return;
-    }
-
     if (_isZoomEnabled && details.pointerCount >= 2) {
       _handlePinchUpdate(details, fullSize);
       return;
@@ -368,20 +353,30 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
 
   void _onPointerDown(PointerDownEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
-      _gesture.isPrimaryPointerDown = event.buttons == kPrimaryButton ||
+      final isDown = event.buttons == kPrimaryButton ||
           (event.buttons & kPrimaryButton) != 0;
+      if (_gesture.isPrimaryPointerDown != isDown) {
+        _gesture.isPrimaryPointerDown = isDown;
+        _refreshPointerCursor();
+      }
     }
   }
 
   void _onPointerUp(PointerUpEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
-      _gesture.isPrimaryPointerDown = false;
+      if (_gesture.isPrimaryPointerDown) {
+        _gesture.isPrimaryPointerDown = false;
+        _refreshPointerCursor();
+      }
     }
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
-      _gesture.isPrimaryPointerDown = false;
+      if (_gesture.isPrimaryPointerDown) {
+        _gesture.isPrimaryPointerDown = false;
+        _refreshPointerCursor();
+      }
     }
   }
 

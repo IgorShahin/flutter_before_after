@@ -11,6 +11,15 @@ extension _BeforeAfterConfigX on _BeforeAfterState {
   double get _effectiveZoomPanSensitivity =>
       widget.zoomOptions.zoomPanSensitivity;
 
+  bool get _effectiveShowPointerCursor => widget.zoomOptions.showPointerCursor;
+
+  MouseCursor get _effectiveIdleCursor => widget.zoomOptions.idleCursor;
+
+  MouseCursor get _effectiveZoomedCursor => widget.zoomOptions.zoomedCursor;
+
+  MouseCursor get _effectiveZoomedDraggingCursor =>
+      widget.zoomOptions.zoomedDraggingCursor;
+
   PointerZoomOptions get _effectivePointerZoom => widget.zoomOptions.pointer;
 
   double get _effectiveDoubleTapZoomScale =>

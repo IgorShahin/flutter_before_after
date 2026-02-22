@@ -10,6 +10,10 @@ class BeforeAfterZoomOptions {
     this.enabled = true,
     this.gestureZoomSmoothing = 1.0,
     this.zoomPanSensitivity = 1.0,
+    this.showPointerCursor = true,
+    this.idleCursor = SystemMouseCursors.basic,
+    this.zoomedCursor = SystemMouseCursors.grab,
+    this.zoomedDraggingCursor = SystemMouseCursors.grabbing,
     this.pointer = const PointerZoomOptions(),
     this.runtime = const ZoomRuntimeOptions(),
     this.enableDoubleTapZoom = true,
@@ -43,6 +47,10 @@ class BeforeAfterZoomOptions {
   final bool enabled;
   final double gestureZoomSmoothing;
   final double zoomPanSensitivity;
+  final bool showPointerCursor;
+  final MouseCursor idleCursor;
+  final MouseCursor zoomedCursor;
+  final MouseCursor zoomedDraggingCursor;
   final PointerZoomOptions pointer;
   final ZoomRuntimeOptions runtime;
   final bool enableDoubleTapZoom;

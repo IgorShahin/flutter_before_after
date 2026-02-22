@@ -107,6 +107,7 @@ class _DemoPageState extends State<DemoPage> {
                 ),
                 zoomOptions: const BeforeAfterZoomOptions(
                   zoomPanSensitivity: 0.95,
+                  showPointerCursor: true,
                   enableContainerScaleOnZoom: true,
                   containerScaleMax: 1.55,
                   containerScaleZoomRange: 0.9,

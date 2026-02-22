@@ -219,6 +219,11 @@ class _BeforeAfterState extends State<BeforeAfter> {
     _updateContainerScaleFromZoom();
   }
 
+  void _refreshPointerCursor() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final sideContent = _resolveSideContent(context);
@@ -267,6 +272,38 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 zoomController: _zoomController,
               );
 
+              final pointerLayer = Listener(
+                onPointerDown: _onPointerDown,
+                onPointerUp: _onPointerUp,
+                onPointerCancel: _onPointerCancel,
+                onPointerSignal: (event) => _onPointerSignal(event, sceneSize),
+                onPointerPanZoomStart: _onPointerPanZoomStart,
+                onPointerPanZoomUpdate: (event) =>
+                    _onPointerPanZoomUpdate(event, sceneSize),
+                onPointerPanZoomEnd: _onPointerPanZoomEnd,
+                child: scene,
+              );
+
+              final sceneWithCursor = _isDesktopLike && _effectiveShowPointerCursor
+                  ? AnimatedBuilder(
+                      animation: _zoomController,
+                      child: pointerLayer,
+                      builder: (context, child) {
+                        final canPanZoomedContent = _isZoomEnabled &&
+                            _zoomController.effectiveZoom > 1.001;
+                        final cursor = canPanZoomedContent
+                            ? (_gesture.isPrimaryPointerDown
+                                ? _effectiveZoomedDraggingCursor
+                                : _effectiveZoomedCursor)
+                            : _effectiveIdleCursor;
+                        return MouseRegion(
+                          cursor: cursor,
+                          child: child!,
+                        );
+                      },
+                    )
+                  : pointerLayer;
+
               final gestureLayer = GestureDetector(
                 onScaleStart: _onScaleStart,
                 onScaleUpdate: (details) => _onScaleUpdate(details, sceneSize),
@@ -277,18 +314,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled
                     ? () => _onDoubleTap(sceneSize)
                     : null,
-                child: Listener(
-                  onPointerDown: _onPointerDown,
-                  onPointerUp: _onPointerUp,
-                  onPointerCancel: _onPointerCancel,
-                  onPointerSignal: (event) =>
-                      _onPointerSignal(event, sceneSize),
-                  onPointerPanZoomStart: _onPointerPanZoomStart,
-                  onPointerPanZoomUpdate: (event) =>
-                      _onPointerPanZoomUpdate(event, sceneSize),
-                  onPointerPanZoomEnd: _onPointerPanZoomEnd,
-                  child: scene,
-                ),
+                child: sceneWithCursor,
               );
 
               return Align(
