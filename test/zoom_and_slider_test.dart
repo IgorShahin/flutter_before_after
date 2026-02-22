@@ -306,7 +306,9 @@ void main() {
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: zoomController,
-                enableDoubleTapZoom: false,
+                zoomOptions: const BeforeAfterZoomOptions(
+                  enableDoubleTapZoom: false,
+                ),
               ),
             ),
           ),
@@ -463,8 +465,10 @@ void main() {
               child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
-                beforeLabelBuilder: (_) => const Text('My Before'),
-                afterLabelBuilder: (_) => const Text('My After'),
+                labelsOptions: BeforeAfterLabelsOptions(
+                  beforeBuilder: (_) => const Text('My Before'),
+                  afterBuilder: (_) => const Text('My After'),
+                ),
               ),
             ),
           ),
@@ -485,9 +489,11 @@ void main() {
               child: BeforeAfter(
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
-                labelsOptions: const BeforeAfterLabelsOptions(show: false),
-                beforeLabelBuilder: (_) => const Text('Hidden Before'),
-                afterLabelBuilder: (_) => const Text('Hidden After'),
+                labelsOptions: BeforeAfterLabelsOptions(
+                  show: false,
+                  beforeBuilder: (_) => const Text('Hidden Before'),
+                  afterBuilder: (_) => const Text('Hidden After'),
+                ),
               ),
             ),
           ),
@@ -528,7 +534,7 @@ void main() {
       expect(callbackValue, isNull);
     });
 
-    testWidgets('zoomOptions overrides legacy zoom configuration',
+    testWidgets('zoomOptions.enabled disables zoom interactions',
         (tester) async {
       final controller = ZoomController();
 
@@ -542,8 +548,6 @@ void main() {
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: controller,
-                // Legacy says enabled, grouped options should override.
-                enableZoom: true,
                 zoomOptions: const BeforeAfterZoomOptions(enabled: false),
               ),
             ),

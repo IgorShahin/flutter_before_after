@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -13,10 +14,9 @@ import 'enums/slider_drag_mode.dart';
 import 'options/before_after_interaction_options.dart';
 import 'options/before_after_labels_options.dart';
 import 'options/before_after_zoom_options.dart';
-import 'options/desktop_zoom_options.dart';
 import 'options/overlay_style.dart';
+import 'options/pointer_zoom_options.dart';
 import 'options/slider_hit_zone.dart';
-import 'options/zoom_runtime_options.dart';
 import 'widgets/default_overlay.dart';
 import 'widgets/labels.dart';
 
@@ -38,31 +38,14 @@ class BeforeAfter extends StatefulWidget {
     this.onProgressChanged,
     this.onProgressStart,
     this.onProgressEnd,
-    this.interactionOptions,
-    this.enableProgressWithTouch = true,
-    this.zoomOptions,
-    this.enableZoom = true,
-    this.enableDoubleTapZoom,
-    @Deprecated('Use enableDoubleTapZoom instead.')
-    this.enableDoubleTapZoomToggle,
-    this.doubleTapZoomScale = 3.0,
-    this.doubleTapZoomDuration = const Duration(milliseconds: 420),
-    this.doubleTapZoomCurve = Curves.easeInOutCubic,
-    this.gestureZoomSmoothing = 1.0,
-    this.zoomPanSensitivity = 1.0,
+    this.interactionOptions = const BeforeAfterInteractionOptions(),
+    this.zoomOptions = const BeforeAfterZoomOptions(),
+    this.viewportAspectRatio,
     this.contentOrder = ContentOrder.beforeAfter,
     this.overlayStyle = const OverlayStyle(),
-    this.labelsOptions,
-    this.beforeLabelBuilder,
-    this.afterLabelBuilder,
+    this.labelsOptions = const BeforeAfterLabelsOptions(),
     this.overlay,
     this.zoomController,
-    this.sliderDragMode = SliderDragMode.fullOverlay,
-    this.sliderHitZone = const SliderHitZone(),
-    this.showLabels = true,
-    this.labelBehavior,
-    @Deprecated('Use labelBehavior instead.') this.fixedLabels = true,
-    this.desktopZoom = const DesktopZoomOptions(),
     this.enableReverseZoomVisualEffect = false,
     this.reverseZoomMinScale = 0.92,
     this.reverseZoomMaxShrink = 0.18,
@@ -80,16 +63,8 @@ class BeforeAfter extends StatefulWidget {
           'reverseZoomEffectBorderRadius must be >= 0.0',
         ),
         assert(
-          zoomPanSensitivity > 0.0,
-          'zoomPanSensitivity must be > 0.0',
-        ),
-        assert(
-          gestureZoomSmoothing > 0.0 && gestureZoomSmoothing <= 1.0,
-          'gestureZoomSmoothing must be in (0.0, 1.0]',
-        ),
-        assert(
-          doubleTapZoomScale >= 1.0,
-          'doubleTapZoomScale must be >= 1.0',
+          viewportAspectRatio == null || viewportAspectRatio > 0.0,
+          'viewportAspectRatio must be > 0.0',
         );
 
   /// The "before" widget to display.
@@ -111,43 +86,18 @@ class BeforeAfter extends StatefulWidget {
   /// Called when the user stops dragging the divider.
   final ValueChanged<double>? onProgressEnd;
 
-  /// Grouped interaction options (optional).
-  final BeforeAfterInteractionOptions? interactionOptions;
+  /// Grouped interaction options.
+  final BeforeAfterInteractionOptions interactionOptions;
 
-  /// Whether the user can change the progress by dragging.
-  final bool enableProgressWithTouch;
+  /// Grouped zoom options.
+  final BeforeAfterZoomOptions zoomOptions;
 
-  /// Grouped zoom options (optional).
-  final BeforeAfterZoomOptions? zoomOptions;
-
-  /// Whether pinch-to-zoom is enabled.
-  final bool enableZoom;
-
-  /// Enables zoom toggle behavior on double tap.
-  final bool? enableDoubleTapZoom;
-
-  /// Enables double-tap zoom toggle animation.
-  @Deprecated('Use enableDoubleTapZoom instead.')
-  final bool? enableDoubleTapZoomToggle;
-
-  /// Target zoom used on double-tap from base zoom.
-  final double doubleTapZoomScale;
-
-  /// Animation duration for double-tap zoom toggle.
-  final Duration doubleTapZoomDuration;
-
-  /// Animation curve for double-tap zoom toggle.
-  final Curve doubleTapZoomCurve;
-
-  /// Smoothing factor for pinch gesture zoom.
+  /// Optional target aspect ratio for the visible scene (width / height).
   ///
-  /// Lower values feel softer, higher values react faster.
-  final double gestureZoomSmoothing;
-
-  /// Pan speed multiplier while zooming.
-  ///
-  /// `1.0` is default speed, `<1.0` slower, `>1.0` faster.
-  final double zoomPanSensitivity;
+  /// When set, content starts fitted inside available bounds using this ratio.
+  /// With container-scale-on-zoom enabled, scene can smoothly grow toward
+  /// full available size while zooming.
+  final double? viewportAspectRatio;
 
   /// The order in which before and after content is displayed.
   final ContentOrder contentOrder;
@@ -155,41 +105,14 @@ class BeforeAfter extends StatefulWidget {
   /// Style configuration for the overlay (divider and thumb).
   final OverlayStyle overlayStyle;
 
-  /// Grouped labels options (optional).
-  final BeforeAfterLabelsOptions? labelsOptions;
-
-  /// Builder for the "before" label widget.
-  final Widget Function(BuildContext context)? beforeLabelBuilder;
-
-  /// Builder for the "after" label widget.
-  final Widget Function(BuildContext context)? afterLabelBuilder;
+  /// Grouped labels options.
+  final BeforeAfterLabelsOptions labelsOptions;
 
   /// Custom overlay widget builder. If null, uses [DefaultOverlay].
   final Widget Function(Size size, Offset position)? overlay;
 
   /// Controller for programmatic zoom/pan control.
   final ZoomController? zoomController;
-
-  /// Defines which part of overlay can start slider dragging.
-  final SliderDragMode sliderDragMode;
-
-  /// Hit/capture zone settings for slider interactions.
-  final SliderHitZone sliderHitZone;
-
-  /// Whether the "before/after" labels are shown.
-  final bool showLabels;
-
-  /// Defines how labels are rendered relative to the slider/content.
-  ///
-  /// If null, behavior is inferred from deprecated `fixedLabels`.
-  final LabelBehavior? labelBehavior;
-
-  /// Whether labels stay fixed on screen while content is zoomed/panned.
-  @Deprecated('Use labelBehavior instead.')
-  final bool fixedLabels;
-
-  /// Grouped desktop zoom configuration.
-  final DesktopZoomOptions desktopZoom;
 
   /// Adds a visual "container shrink" effect while zooming out.
   ///
@@ -217,8 +140,6 @@ class _BeforeAfterState extends State<BeforeAfter> {
   bool _ownsZoomController = false;
 
   final _gesture = _GestureSessionState();
-  bool _hasScheduledVisualScaleUpdate = false;
-  double? _pendingVisualScaleTarget;
   bool _hasScheduledProgressCallback = false;
   double? _pendingProgressCallback;
 
@@ -263,7 +184,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
       _zoomController = widget.zoomController!;
       _ownsZoomController = false;
     } else {
-      final runtime = widget.zoomOptions?.runtime ?? const ZoomRuntimeOptions();
+      final runtime = widget.zoomOptions.runtime;
       _zoomController = runtime.createController();
       _ownsZoomController = true;
     }
@@ -278,19 +199,6 @@ class _BeforeAfterState extends State<BeforeAfter> {
     if ((_containerVisualScaleTargetNotifier.value - clamped).abs() > 0.0005) {
       _containerVisualScaleTargetNotifier.value = clamped;
     }
-  }
-
-  void _queueContainerVisualScaleTarget(double value) {
-    _pendingVisualScaleTarget = value;
-    if (_hasScheduledVisualScaleUpdate) return;
-    _hasScheduledVisualScaleUpdate = true;
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _hasScheduledVisualScaleUpdate = false;
-      final pending = _pendingVisualScaleTarget;
-      _pendingVisualScaleTarget = null;
-      if (pending == null || !mounted) return;
-      _setContainerVisualScaleTarget(pending);
-    });
   }
 
   void _queueProgressChangedCallback(double value) {
@@ -308,7 +216,6 @@ class _BeforeAfterState extends State<BeforeAfter> {
 
   void _onZoomControllerChanged() {
     if (!mounted) return;
-    if (_effectiveEnableContainerScaleOnZoom) return;
     _updateContainerScaleFromZoom();
   }
 
@@ -318,16 +225,33 @@ class _BeforeAfterState extends State<BeforeAfter> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final fullSize = Size(constraints.maxWidth, constraints.maxHeight);
+        var baseWidth = constraints.maxWidth;
+        if (!baseWidth.isFinite || baseWidth <= 0) {
+          baseWidth = constraints.minWidth;
+        }
+        if (!baseWidth.isFinite || baseWidth <= 0) {
+          baseWidth = MediaQuery.sizeOf(context).width;
+        }
+
+        var baseHeight = constraints.maxHeight;
+        if (!baseHeight.isFinite || baseHeight <= 0) {
+          baseHeight = constraints.minHeight;
+        }
+        if (!baseHeight.isFinite || baseHeight <= 0) {
+          baseHeight = baseWidth * 0.75;
+        }
+
+        final baseSize = Size(baseWidth, baseHeight);
 
         return ValueListenableBuilder<double>(
           valueListenable: _progressNotifier,
           builder: (context, progress, _) {
             Widget buildSceneWithScale(double visualScale) {
-              final visual = _visualGeometry(fullSize, visualScale);
+              final sceneSize = baseSize;
+              final visual = _visualGeometry(sceneSize, visualScale);
 
               final scene = _BeforeAfterScene(
-                fullSize: fullSize,
+                fullSize: sceneSize,
                 visual: visual,
                 progress: progress,
                 sideContent: sideContent,
@@ -343,37 +267,44 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 zoomController: _zoomController,
               );
 
-              return GestureDetector(
+              final gestureLayer = GestureDetector(
                 onScaleStart: _onScaleStart,
-                onScaleUpdate: (details) => _onScaleUpdate(details, fullSize),
+                onScaleUpdate: (details) => _onScaleUpdate(details, sceneSize),
                 onScaleEnd: _onScaleEnd,
                 onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled
                     ? _onDoubleTapDown
                     : null,
                 onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled
-                    ? () => _onDoubleTap(fullSize)
+                    ? () => _onDoubleTap(sceneSize)
                     : null,
                 child: Listener(
                   onPointerDown: _onPointerDown,
                   onPointerUp: _onPointerUp,
                   onPointerCancel: _onPointerCancel,
-                  onPointerSignal: (event) => _onPointerSignal(event, fullSize),
+                  onPointerSignal: (event) =>
+                      _onPointerSignal(event, sceneSize),
                   onPointerPanZoomStart: _onPointerPanZoomStart,
                   onPointerPanZoomUpdate: (event) =>
-                      _onPointerPanZoomUpdate(event, fullSize),
+                      _onPointerPanZoomUpdate(event, sceneSize),
                   onPointerPanZoomEnd: _onPointerPanZoomEnd,
                   child: scene,
+                ),
+              );
+
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: sceneSize.width,
+                  height: sceneSize.height,
+                  child: gestureLayer,
                 ),
               );
             }
 
             if (_effectiveEnableContainerScaleOnZoom) {
-              return AnimatedBuilder(
-                animation: _zoomController,
-                builder: (context, _) {
-                  final visualScale = _targetContainerGrowScaleFromZoom(
-                    _zoomController.effectiveZoom,
-                  );
+              return ValueListenableBuilder<double>(
+                valueListenable: _containerVisualScaleTargetNotifier,
+                builder: (context, visualScale, _) {
                   return buildSceneWithScale(visualScale);
                 },
               );

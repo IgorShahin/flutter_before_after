@@ -1,43 +1,35 @@
 part of '../before_after.dart';
 
 extension _BeforeAfterConfigX on _BeforeAfterState {
-  bool get _isDoubleTapZoomEnabled {
-    final optionsEnabled = widget.zoomOptions?.enableDoubleTapZoom;
-    if (optionsEnabled != null) return optionsEnabled;
-    final enabled = widget.enableDoubleTapZoom;
-    if (enabled != null) return enabled;
-    // ignore: deprecated_member_use_from_same_package
-    return widget.enableDoubleTapZoomToggle ?? true;
-  }
+  bool get _isDoubleTapZoomEnabled => widget.zoomOptions.enableDoubleTapZoom;
 
-  bool get _isZoomEnabled => widget.zoomOptions?.enabled ?? widget.enableZoom;
+  bool get _isZoomEnabled => widget.zoomOptions.enabled;
 
   double get _effectiveGestureZoomSmoothing =>
-      widget.zoomOptions?.gestureZoomSmoothing ?? widget.gestureZoomSmoothing;
+      widget.zoomOptions.gestureZoomSmoothing;
 
   double get _effectiveZoomPanSensitivity =>
-      widget.zoomOptions?.zoomPanSensitivity ?? widget.zoomPanSensitivity;
+      widget.zoomOptions.zoomPanSensitivity;
 
-  DesktopZoomOptions get _effectiveDesktopZoom =>
-      widget.zoomOptions?.desktop ?? widget.desktopZoom;
+  PointerZoomOptions get _effectivePointerZoom => widget.zoomOptions.pointer;
 
   double get _effectiveDoubleTapZoomScale =>
-      widget.zoomOptions?.doubleTapZoomScale ?? widget.doubleTapZoomScale;
+      widget.zoomOptions.doubleTapZoomScale;
 
   Duration get _effectiveDoubleTapZoomDuration =>
-      widget.zoomOptions?.doubleTapZoomDuration ?? widget.doubleTapZoomDuration;
+      widget.zoomOptions.doubleTapZoomDuration;
 
   Curve get _effectiveDoubleTapZoomCurve =>
-      widget.zoomOptions?.doubleTapZoomCurve ?? widget.doubleTapZoomCurve;
+      widget.zoomOptions.doubleTapZoomCurve;
 
   bool get _effectiveEnableContainerScaleOnZoom =>
-      widget.zoomOptions?.enableContainerScaleOnZoom ?? false;
+      widget.zoomOptions.enableContainerScaleOnZoom;
 
   double get _effectiveContainerScaleMax =>
-      widget.zoomOptions?.containerScaleMax ?? 1.12;
+      widget.zoomOptions.containerScaleMax;
 
   double get _effectiveContainerScaleZoomRange =>
-      widget.zoomOptions?.containerScaleZoomRange ?? 2.0;
+      widget.zoomOptions.containerScaleZoomRange;
 
   bool get _hasContainerVisualScaleEffect =>
       widget.enableReverseZoomVisualEffect ||
@@ -50,15 +42,13 @@ extension _BeforeAfterConfigX on _BeforeAfterState {
       _effectiveEnableContainerScaleOnZoom ? _effectiveContainerScaleMax : 1.0;
 
   bool get _effectiveEnableProgressWithTouch =>
-      widget.interactionOptions?.enableProgressWithTouch ??
-      widget.enableProgressWithTouch;
+      widget.interactionOptions.enableProgressWithTouch;
 
   SliderDragMode get _effectiveSliderDragMode =>
-      widget.interactionOptions?.sliderDragMode ?? widget.sliderDragMode;
+      widget.interactionOptions.sliderDragMode;
 
   SliderHitZone get _effectiveSliderHitZone =>
-      widget.interactionOptions?.sliderHitZone ?? widget.sliderHitZone;
+      widget.interactionOptions.sliderHitZone;
 
-  bool get _effectiveShowLabels =>
-      widget.labelsOptions?.show ?? widget.showLabels;
+  bool get _effectiveShowLabels => widget.labelsOptions.show;
 }

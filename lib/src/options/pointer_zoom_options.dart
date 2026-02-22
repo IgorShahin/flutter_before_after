@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-/// Desktop zoom behavior configuration.
+/// Pointer-based zoom behavior configuration (desktop and web).
 @immutable
-class DesktopZoomOptions {
-  const DesktopZoomOptions({
+class PointerZoomOptions {
+  const PointerZoomOptions({
     this.enabled = true,
     this.requiresModifier = true,
     this.sensitivity = 0.0036,

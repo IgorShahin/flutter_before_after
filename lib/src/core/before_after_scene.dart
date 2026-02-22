@@ -34,18 +34,8 @@ class _BeforeAfterScene extends StatelessWidget {
     final dividerScreenX = visual.offsetX + progress * visual.width;
     final rawDividerLocalX = dividerScreenX - visual.offsetX;
     final dividerLocalX = rawDividerLocalX.clamp(0.0, visual.width);
-    final containerScale = visual.containerScale;
-    final scaleProgress = (containerScale - 1.0).clamp(0.0, 1.0);
-    final contentScaleY = 1.0 + scaleProgress * 1.4;
-    const contentScaleX = 1.0;
+    final dividerLocalXForScaledContent = dividerLocalX;
     final centerX = visual.width / 2;
-    final expandedHeight = visual.height * contentScaleY;
-    final overflowY =
-        (expandedHeight - visual.height).clamp(0.0, double.infinity) / 2;
-    final dividerLocalXForScaledContent = containerScale == 1.0
-        ? dividerLocalX
-        : ((dividerLocalX - centerX) / contentScaleX + centerX)
-            .clamp(0.0, visual.width);
     final isAttachedLabels = labelBehavior == LabelBehavior.attachedToContent;
     final isStaticLabels = labelBehavior == LabelBehavior.staticOverlaySafe;
 
@@ -90,19 +80,14 @@ class _BeforeAfterScene extends StatelessWidget {
           )
         : buildZoomableContent(dividerLocalXForScaledContent);
 
-    final overlayVerticalOverflow = overflowY;
-    final overlayHeight = visual.height + overlayVerticalOverflow * 2;
-    final overlaySize = Size(visual.width, overlayHeight);
-    final overlayPos = Offset(dividerLocalX, overlayHeight / 2);
-
     final overlay = overlayBuilder?.call(
-          overlaySize,
-          overlayPos,
+          Size(visual.width, visual.height),
+          Offset(dividerLocalX, visual.height / 2),
         ) ??
         DefaultOverlay(
-          width: overlaySize.width,
-          height: overlaySize.height,
-          position: overlayPos,
+          width: visual.width,
+          height: visual.height,
+          position: Offset(dividerLocalX, visual.height / 2),
           style: overlayStyle,
         );
 
@@ -145,85 +130,41 @@ class _BeforeAfterScene extends StatelessWidget {
                       Stack(
                         fit: StackFit.expand,
                         children: [
-                          if (containerScale == 1.0)
-                            contentLayer
-                          else
-                            OverflowBox(
-                              alignment: Alignment.center,
-                              minWidth: visual.width,
-                              maxWidth: visual.width,
-                              minHeight: expandedHeight,
-                              maxHeight: expandedHeight,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(radius),
-                                child: SizedBox(
-                                  width: visual.width,
-                                  height: expandedHeight,
-                                  child: Transform(
-                                    alignment: Alignment.center,
-                                    transform: Matrix4.diagonal3Values(
-                                      contentScaleX,
-                                      contentScaleY,
-                                      1.0,
-                                    ),
-                                    child: contentLayer,
-                                  ),
-                                ),
-                              ),
-                            ),
+                          contentLayer,
                           if (showLabels && isAttachedLabels)
                             Positioned.fill(
-                              child: OverflowBox(
-                                alignment: Alignment.center,
-                                minWidth: visual.width,
-                                maxWidth: visual.width,
-                                minHeight: expandedHeight,
-                                maxHeight: expandedHeight,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(radius),
-                                  child: SizedBox(
-                                    width: visual.width,
-                                    height: expandedHeight,
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        ClipRect(
-                                          clipper:
-                                              _LeftRectClipper(dividerLocalX),
-                                          child: Align(
-                                            alignment: Alignment.topLeft,
-                                            child: RepaintBoundary(
-                                              child: sideContent.leftLabel,
-                                            ),
-                                          ),
-                                        ),
-                                        ClipRect(
-                                          clipper:
-                                              _RightRectClipper(dividerLocalX),
-                                          child: Align(
-                                            alignment: Alignment.topRight,
-                                            child: RepaintBoundary(
-                                              child: sideContent.rightLabel,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  ClipRect(
+                                    clipper: _LeftRectClipper(
+                                      dividerLocalX,
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.topLeft,
+                                      child: RepaintBoundary(
+                                        child: sideContent.leftLabel,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  ClipRect(
+                                    clipper: _RightRectClipper(
+                                      dividerLocalX,
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.topRight,
+                                      child: RepaintBoundary(
+                                        child: sideContent.rightLabel,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                         ],
                       ),
-                      Positioned.fill(
-                        child: OverflowBox(
-                          alignment: Alignment.center,
-                          minWidth: overlaySize.width,
-                          maxWidth: overlaySize.width,
-                          minHeight: overlaySize.height,
-                          maxHeight: overlaySize.height,
-                          child: RepaintBoundary(child: overlay),
-                        ),
+                      RepaintBoundary(
+                        child: overlay,
                       ),
                       if (showLabels && isStaticLabels)
                         Align(
