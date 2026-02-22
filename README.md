@@ -77,9 +77,11 @@ BeforeAfter(
   interactionOptions: const BeforeAfterInteractionOptions(
     sliderDragMode: SliderDragMode.fullOverlay,
   ),
-  overlayStyle: const OverlayStyle(
-    dividerWidth: 2,
-    thumbSize: 40,
+  overlayOptions: const BeforeAfterOverlayOptions(
+    style: OverlayStyle(
+      dividerWidth: 2,
+      thumbSize: 40,
+    ),
   ),
   onProgressChanged: (value) {
     // 0.0 .. 1.0
@@ -127,8 +129,7 @@ controller.reset();
 - `zoomOptions` (`BeforeAfterZoomOptions`)
 - `labelsOptions` (`BeforeAfterLabelsOptions`)
 - `contentOrder`
-- `overlayStyle`
-- `overlay` (custom builder)
+- `overlayOptions` (`BeforeAfterOverlayOptions`)
 - `zoomController`
 
 `zoomOptions.desktop.requiresModifier` uses platform-specific keys by default:

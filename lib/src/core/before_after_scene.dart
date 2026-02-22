@@ -67,10 +67,12 @@ class _BeforeAfterScene extends StatelessWidget {
         ? AnimatedBuilder(
             animation: zoomController,
             builder: (context, _) {
-              final dividerContentX =
-                  ((dividerLocalXForScaledContent - centerX - zoomController.pan.dx) / zoomController.effectiveZoom +
-                          centerX)
-                      .clamp(0.0, visual.width);
+              final dividerContentX = ((dividerLocalXForScaledContent -
+                              centerX -
+                              zoomController.pan.dx) /
+                          zoomController.effectiveZoom +
+                      centerX)
+                  .clamp(0.0, visual.width);
               return buildZoomableContent(dividerContentX);
             },
           )
@@ -94,82 +96,71 @@ class _BeforeAfterScene extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Center(
-          child: Builder(
-            builder: (context) {
-              final contentLayer = ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                child: zoomableContent,
-              );
-              final sceneBody = SizedBox(
-                width: visual.width,
-                height: visual.height,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          contentLayer,
-                          if (showLabels && isAttachedLabels)
-                            Positioned.fill(
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  ClipRect(
-                                    clipper: _LeftRectClipper(
-                                      dividerLocalX,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.topLeft,
-                                      child: RepaintBoundary(
-                                        child: sideContent.leftLabel,
-                                      ),
-                                    ),
-                                  ),
-                                  ClipRect(
-                                    clipper: _RightRectClipper(
-                                      dividerLocalX,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.topRight,
-                                      child: RepaintBoundary(
-                                        child: sideContent.rightLabel,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+          child: SizedBox(
+            width: visual.width,
+            height: visual.height,
+            child: Stack(
+              fit: StackFit.expand,
+              clipBehavior: Clip.none,
+              children: [
+                Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(radius),
+                      child: zoomableContent,
+                    ),
+                    if (showLabels && isAttachedLabels)
+                      Positioned.fill(
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ClipRect(
+                              clipper: _LeftRectClipper(
+                                dividerLocalX,
+                              ),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: RepaintBoundary(
+                                  child: sideContent.leftLabel,
+                                ),
                               ),
                             ),
-                        ],
-                      ),
-                      RepaintBoundary(
-                        child: overlay,
-                      ),
-                      if (showLabels && isStaticLabels)
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: RepaintBoundary(
-                            child: sideContent.leftLabel,
-                          ),
+                            ClipRect(
+                              clipper: _RightRectClipper(
+                                dividerLocalX,
+                              ),
+                              child: Align(
+                                alignment: Alignment.topRight,
+                                child: RepaintBoundary(
+                                  child: sideContent.rightLabel,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      if (showLabels && isStaticLabels)
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: RepaintBoundary(
-                            child: sideContent.rightLabel,
-                          ),
-                        ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
-              );
-              return sceneBody;
-            },
+                RepaintBoundary(
+                  child: overlay,
+                ),
+                if (showLabels && isStaticLabels)
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: RepaintBoundary(
+                      child: sideContent.leftLabel,
+                    ),
+                  ),
+                if (showLabels && isStaticLabels)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: RepaintBoundary(
+                      child: sideContent.rightLabel,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ],

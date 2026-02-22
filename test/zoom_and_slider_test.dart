@@ -388,7 +388,9 @@ void main() {
                 beforeChild: const ColoredBox(color: Colors.red),
                 afterChild: const ColoredBox(color: Colors.blue),
                 zoomController: zoomController,
-                overlayStyle: const OverlayStyle(thumbSize: 40),
+                overlayOptions: const BeforeAfterOverlayOptions(
+                  style: OverlayStyle(thumbSize: 40),
+                ),
               ),
             ),
           ),
