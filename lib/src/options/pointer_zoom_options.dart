@@ -13,13 +13,10 @@ class PointerZoomOptions {
     this.panToZoomSensitivity = 10.0,
     this.panToZoomMinStep = 8.0,
   })  : assert(sensitivity > 0.0, 'sensitivity must be > 0.0'),
-        assert(
-            smoothing > 0.0 && smoothing <= 1.0, 'smoothing must be in (0, 1]'),
-        assert(mouseSensitivityMultiplier > 0.0,
-            'mouseSensitivityMultiplier must be > 0.0'),
+        assert(smoothing > 0.0 && smoothing <= 1.0, 'smoothing must be in (0, 1]'),
+        assert(mouseSensitivityMultiplier > 0.0, 'mouseSensitivityMultiplier must be > 0.0'),
         assert(mouseMinStep >= 0.0, 'mouseMinStep must be >= 0.0'),
-        assert(
-            panToZoomSensitivity > 0.0, 'panToZoomSensitivity must be > 0.0'),
+        assert(panToZoomSensitivity > 0.0, 'panToZoomSensitivity must be > 0.0'),
         assert(panToZoomMinStep >= 0.0, 'panToZoomMinStep must be >= 0.0');
 
   final bool enabled;

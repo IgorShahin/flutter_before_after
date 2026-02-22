@@ -51,9 +51,7 @@ class BeforeLabel extends StatelessWidget {
 
   /// Returns the alignment for this label based on content order.
   Alignment get alignment {
-    return contentOrder == ContentOrder.beforeAfter
-        ? Alignment.topLeft
-        : Alignment.topRight;
+    return contentOrder == ContentOrder.beforeAfter ? Alignment.topLeft : Alignment.topRight;
   }
 }
 
@@ -106,8 +104,6 @@ class AfterLabel extends StatelessWidget {
 
   /// Returns the alignment for this label based on content order.
   Alignment get alignment {
-    return contentOrder == ContentOrder.beforeAfter
-        ? Alignment.topRight
-        : Alignment.topLeft;
+    return contentOrder == ContentOrder.beforeAfter ? Alignment.topRight : Alignment.topLeft;
   }
 }

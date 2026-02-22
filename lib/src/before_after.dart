@@ -21,10 +21,15 @@ import 'widgets/default_overlay.dart';
 import 'widgets/labels.dart';
 
 part 'core/before_after_config.dart';
+
 part 'core/before_after_gesture_state.dart';
+
 part 'core/before_after_gestures.dart';
+
 part 'core/before_after_labels.dart';
+
 part 'core/before_after_models.dart';
+
 part 'core/before_after_scene.dart';
 
 /// A unified before/after comparison widget for arbitrary widgets.
@@ -162,12 +167,31 @@ class _BeforeAfterState extends State<BeforeAfter> {
     if (widget.progress != null && widget.progress != _progressNotifier.value) {
       _progressNotifier.value = widget.progress!;
     }
-    if (widget.zoomController != oldWidget.zoomController) {
+    final zoomControllerChanged = widget.zoomController != oldWidget.zoomController;
+    final runtimeChangedForInternalController = widget.zoomController == null &&
+        oldWidget.zoomController == null &&
+        widget.zoomOptions.runtime != oldWidget.zoomOptions.runtime;
+
+    if (zoomControllerChanged || runtimeChangedForInternalController) {
+      final prevZoom = _zoomController.zoom;
+      final prevPan = _zoomController.pan;
+      final prevRotation = _zoomController.rotation;
+
       _zoomController.removeListener(_onZoomControllerChanged);
       if (_ownsZoomController) {
         _zoomController.dispose();
       }
-      _initZoomController();
+      if (widget.zoomController != null) {
+        _zoomController = widget.zoomController!;
+        _ownsZoomController = false;
+      } else {
+        _zoomController = widget.zoomOptions.runtime.createController(
+          initialZoom: prevZoom,
+          initialPan: prevPan,
+          initialRotation: prevRotation,
+        );
+        _ownsZoomController = true;
+      }
       _rebuildCursorListenable();
       _zoomController.addListener(_onZoomControllerChanged);
     }
@@ -202,12 +226,10 @@ class _BeforeAfterState extends State<BeforeAfter> {
     );
   }
 
-  double get _containerVisualScaleTarget =>
-      _containerVisualScaleTargetNotifier.value;
+  double get _containerVisualScaleTarget => _containerVisualScaleTargetNotifier.value;
 
   void _setContainerVisualScaleTarget(double value) {
-    final clamped =
-        value.clamp(_minContainerVisualScale, _maxContainerVisualScale);
+    final clamped = value.clamp(_minContainerVisualScale, _maxContainerVisualScale);
     if ((_containerVisualScaleTargetNotifier.value - clamped).abs() > 0.0005) {
       _containerVisualScaleTargetNotifier.value = clamped;
     }
@@ -270,10 +292,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 enableZoom: _isZoomEnabled,
                 showLabels: _effectiveShowLabels,
                 labelBehavior: _effectiveLabelBehavior,
-                enableReverseZoomVisualEffect:
-                    widget.enableReverseZoomVisualEffect,
-                reverseZoomEffectBorderRadius:
-                    widget.reverseZoomEffectBorderRadius,
+                reverseZoomEffectBorderRadius: widget.reverseZoomEffectBorderRadius,
                 overlayBuilder: widget.overlay,
                 overlayStyle: widget.overlayStyle,
                 zoomController: _zoomController,
@@ -285,8 +304,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 onPointerCancel: _onPointerCancel,
                 onPointerSignal: (event) => _onPointerSignal(event, sceneSize),
                 onPointerPanZoomStart: _onPointerPanZoomStart,
-                onPointerPanZoomUpdate: (event) =>
-                    _onPointerPanZoomUpdate(event, sceneSize),
+                onPointerPanZoomUpdate: (event) => _onPointerPanZoomUpdate(event, sceneSize),
                 onPointerPanZoomEnd: _onPointerPanZoomEnd,
                 child: scene,
               );
@@ -296,8 +314,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                       animation: _cursorListenable,
                       child: pointerLayer,
                       builder: (context, child) {
-                        final canPanZoomedContent = _isZoomEnabled &&
-                            _zoomController.effectiveZoom > 1.001;
+                        final canPanZoomedContent = _isZoomEnabled && _zoomController.effectiveZoom > 1.001;
                         final cursor = canPanZoomedContent
                             ? (_isPrimaryPointerDownNotifier.value
                                 ? _effectiveZoomedDraggingCursor
@@ -315,12 +332,8 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 onScaleStart: _onScaleStart,
                 onScaleUpdate: (details) => _onScaleUpdate(details, sceneSize),
                 onScaleEnd: _onScaleEnd,
-                onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled
-                    ? _onDoubleTapDown
-                    : null,
-                onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled
-                    ? () => _onDoubleTap(sceneSize)
-                    : null,
+                onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled ? _onDoubleTapDown : null,
+                onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled ? () => _onDoubleTap(sceneSize) : null,
                 child: sceneWithCursor,
               );
 
@@ -349,9 +362,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 return TweenAnimationBuilder<double>(
                   tween: Tween<double>(
                     begin: 1.0,
-                    end: _hasContainerVisualScaleEffect
-                        ? visualScaleTarget
-                        : 1.0,
+                    end: _hasContainerVisualScaleEffect ? visualScaleTarget : 1.0,
                   ),
                   duration: const Duration(milliseconds: 160),
                   curve: Curves.easeInOutCubic,

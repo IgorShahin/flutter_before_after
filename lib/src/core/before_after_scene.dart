@@ -9,7 +9,6 @@ class _BeforeAfterScene extends StatelessWidget {
     required this.enableZoom,
     required this.showLabels,
     required this.labelBehavior,
-    required this.enableReverseZoomVisualEffect,
     required this.reverseZoomEffectBorderRadius,
     required this.overlayBuilder,
     required this.overlayStyle,
@@ -23,7 +22,6 @@ class _BeforeAfterScene extends StatelessWidget {
   final bool enableZoom;
   final bool showLabels;
   final LabelBehavior labelBehavior;
-  final bool enableReverseZoomVisualEffect;
   final double reverseZoomEffectBorderRadius;
   final Widget Function(Size size, Offset position)? overlayBuilder;
   final OverlayStyle overlayStyle;
@@ -69,12 +67,10 @@ class _BeforeAfterScene extends StatelessWidget {
         ? AnimatedBuilder(
             animation: zoomController,
             builder: (context, _) {
-              final dividerContentX = ((dividerLocalXForScaledContent -
-                              centerX -
-                              zoomController.pan.dx) /
-                          zoomController.effectiveZoom +
-                      centerX)
-                  .clamp(0.0, visual.width);
+              final dividerContentX =
+                  ((dividerLocalXForScaledContent - centerX - zoomController.pan.dx) / zoomController.effectiveZoom +
+                          centerX)
+                      .clamp(0.0, visual.width);
               return buildZoomableContent(dividerContentX);
             },
           )

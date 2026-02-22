@@ -27,9 +27,7 @@ class DefaultOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbY = style.verticalThumbMove
-        ? position.dy
-        : height * (style.thumbPositionPercent / 100.0);
+    final thumbY = style.verticalThumbMove ? position.dy : height * (style.thumbPositionPercent / 100.0);
 
     return SizedBox(
       width: width,

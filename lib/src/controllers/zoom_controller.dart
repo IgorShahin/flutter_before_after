@@ -69,8 +69,7 @@ class ZoomController extends ChangeNotifier {
   /// Current visual zoom including temporary overshoot.
   double get effectiveZoom => _effectiveZoom;
 
-  double get _effectiveZoom =>
-      (_zoom + _zoomOvershoot).clamp(minZoom, maxZoom + maxZoomOvershoot);
+  double get _effectiveZoom => (_zoom + _zoomOvershoot).clamp(minZoom, maxZoom + maxZoomOvershoot);
 
   /// Current pan offset.
   Offset get pan => _pan;
@@ -140,12 +139,8 @@ class ZoomController extends ChangeNotifier {
       var basePan = _pan;
 
       if (boundPan) {
-        final previousMaxX =
-            (containerSize.width * (previousEffectiveZoom - 1) / 2)
-                .clamp(0.0, double.infinity);
-        final previousMaxY =
-            (containerSize.height * (previousEffectiveZoom - 1) / 2)
-                .clamp(0.0, double.infinity);
+        final previousMaxX = (containerSize.width * (previousEffectiveZoom - 1) / 2).clamp(0.0, double.infinity);
+        final previousMaxY = (containerSize.height * (previousEffectiveZoom - 1) / 2).clamp(0.0, double.infinity);
         final maxX = (containerSize.width * (_effectiveZoom - 1) / 2).clamp(
           0.0,
           double.infinity,
@@ -176,10 +171,7 @@ class ZoomController extends ChangeNotifier {
 
     _clampPanToBounds();
 
-    final changed = oldZoom != _zoom ||
-        oldOvershoot != _zoomOvershoot ||
-        oldPan != _pan ||
-        oldRotation != _rotation;
+    final changed = oldZoom != _zoom || oldOvershoot != _zoomOvershoot || oldPan != _pan || oldRotation != _rotation;
     if (changed) {
       notifyListeners();
     }
@@ -230,8 +222,7 @@ class ZoomController extends ChangeNotifier {
     _cancelTransientAnimations();
     final previousEffectiveZoom = _effectiveZoom;
     final rawDesiredZoom = previousEffectiveZoom * zoomScaleFactor;
-    final desiredZoom = previousEffectiveZoom +
-        (rawDesiredZoom - previousEffectiveZoom) * smoothing;
+    final desiredZoom = previousEffectiveZoom + (rawDesiredZoom - previousEffectiveZoom) * smoothing;
 
     if (allowOvershoot && enableZoomOvershoot && desiredZoom > maxZoom) {
       _zoom = maxZoom;
@@ -260,8 +251,7 @@ class ZoomController extends ChangeNotifier {
     _pan = nextPan;
     _clampPanToBounds();
 
-    final changed =
-        oldZoom != _zoom || oldOvershoot != _zoomOvershoot || oldPan != _pan;
+    final changed = oldZoom != _zoom || oldOvershoot != _zoomOvershoot || oldPan != _pan;
     if (changed) {
       notifyListeners();
     }
@@ -298,8 +288,7 @@ class ZoomController extends ChangeNotifier {
     final resolvedTargetPan = targetPan ??
         (() {
           if (focalPoint == null) return _pan;
-          final center =
-              Offset(containerSize.width / 2, containerSize.height / 2);
+          final center = Offset(containerSize.width / 2, containerSize.height / 2);
           final worldPoint = (focalPoint - center - _pan) / startZoom;
           return focalPoint - center - worldPoint * endZoom;
         })();
@@ -329,13 +318,10 @@ class ZoomController extends ChangeNotifier {
       final eased = curve.transform(t);
       _zoom = startZoom + (endZoom - startZoom) * eased;
       _zoomOvershoot = 0.0;
-      _pan =
-          Offset.lerp(startPan, resolvedTargetPan, eased) ?? resolvedTargetPan;
+      _pan = Offset.lerp(startPan, resolvedTargetPan, eased) ?? resolvedTargetPan;
       _clampPanToBounds();
 
-      if (oldZoom != _zoom ||
-          oldPan != _pan ||
-          oldOvershoot != _zoomOvershoot) {
+      if (oldZoom != _zoom || oldPan != _pan || oldOvershoot != _zoomOvershoot) {
         notifyListeners();
       }
 
@@ -425,10 +411,8 @@ class ZoomController extends ChangeNotifier {
     final size = _lastContainerSize;
     if (size == null) return;
 
-    final maxX =
-        (size.width * (_effectiveZoom - 1) / 2).clamp(0.0, double.infinity);
-    final maxY =
-        (size.height * (_effectiveZoom - 1) / 2).clamp(0.0, double.infinity);
+    final maxX = (size.width * (_effectiveZoom - 1) / 2).clamp(0.0, double.infinity);
+    final maxY = (size.height * (_effectiveZoom - 1) / 2).clamp(0.0, double.infinity);
     _pan = Offset(
       _pan.dx.clamp(-maxX, maxX),
       _pan.dy.clamp(-maxY, maxY),

@@ -40,7 +40,7 @@ export 'src/enums/slider_drag_mode.dart';
 export 'src/options/before_after_interaction_options.dart';
 export 'src/options/before_after_labels_options.dart';
 export 'src/options/before_after_zoom_options.dart';
-export 'src/options/pointer_zoom_options.dart';
 export 'src/options/overlay_style.dart';
+export 'src/options/pointer_zoom_options.dart';
 export 'src/options/slider_hit_zone.dart';
 export 'src/options/zoom_runtime_options.dart';
