@@ -113,6 +113,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
   late final ValueNotifier<double> _progressNotifier;
   late final ValueNotifier<double> _containerVisualScaleTargetNotifier;
   late final ValueNotifier<bool> _isPrimaryPointerDownNotifier;
+  late final ValueNotifier<bool> _isScaleGestureActiveNotifier;
   late Listenable _cursorListenable;
 
   late ZoomController _zoomController;
@@ -139,6 +140,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
     _progressNotifier = ValueNotifier<double>(widget.progress ?? 0.5);
     _containerVisualScaleTargetNotifier = ValueNotifier<double>(1.0);
     _isPrimaryPointerDownNotifier = ValueNotifier<bool>(false);
+    _isScaleGestureActiveNotifier = ValueNotifier<bool>(false);
     _initZoomController();
     _rebuildCursorListenable();
     _zoomController.addListener(_onZoomControllerChanged);
@@ -210,6 +212,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
     _progressNotifier.dispose();
     _containerVisualScaleTargetNotifier.dispose();
     _isPrimaryPointerDownNotifier.dispose();
+    _isScaleGestureActiveNotifier.dispose();
     _zoomController.removeListener(_onZoomControllerChanged);
     if (_ownsZoomController) {
       _zoomController.dispose();
@@ -342,6 +345,14 @@ class _BeforeAfterState extends State<BeforeAfter> {
   double get _containerVisualScaleTarget =>
       _containerVisualScaleTargetNotifier.value;
 
+  bool get _isScaleGestureActive => _isScaleGestureActiveNotifier.value;
+
+  void _setScaleGestureActive(bool value) {
+    if (_isScaleGestureActiveNotifier.value != value) {
+      _isScaleGestureActiveNotifier.value = value;
+    }
+  }
+
   void _setContainerVisualScaleTarget(double value) {
     final clamped =
         value.clamp(_minContainerVisualScale, _maxContainerVisualScale);
@@ -473,6 +484,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
         final rebuildListenable = Listenable.merge([
           _progressNotifier,
           _containerVisualScaleTargetNotifier,
+          _isScaleGestureActiveNotifier,
         ]);
 
         return AnimatedBuilder(
@@ -501,7 +513,9 @@ class _BeforeAfterState extends State<BeforeAfter> {
               builder: (context, visualScale, _) {
                 return buildSceneWithScale(
                   progress: progress,
-                  visualScale: visualScale,
+                  visualScale: _isScaleGestureActive
+                      ? _containerVisualScaleTarget
+                      : visualScale,
                 );
               },
             );

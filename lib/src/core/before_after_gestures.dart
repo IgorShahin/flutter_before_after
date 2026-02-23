@@ -243,6 +243,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     _gesture.lastFocalPoint = details.localFocalPoint;
     _gesture.lastScale = 1.0;
     _gesture.lastPointerCount = details.pointerCount;
+    _setScaleGestureActive(_isZoomEnabled && details.pointerCount >= 2);
 
     if (_effectiveEnableProgressWithTouch && details.pointerCount == 1) {
       final fullSize = context.size;
@@ -256,6 +257,10 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details, Size fullSize) {
+    if (_isZoomEnabled) {
+      _setScaleGestureActive(details.pointerCount >= 2);
+    }
+
     if (_gesture.isDragging) {
       _updateProgress(details.localFocalPoint, fullSize);
       return;
@@ -337,6 +342,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
+    _setScaleGestureActive(false);
     if (_gesture.isDragging) {
       widget.onProgressEnd?.call(_progressNotifier.value);
       _gesture.isDragging = false;
