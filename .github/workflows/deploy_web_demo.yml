@@ -2,16 +2,6 @@ name: Deploy Web Demo
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
-      - dev
-    paths:
-      - 'lib/**'
-      - 'showcase/**'
-      - 'pubspec.yaml'
-      - '.github/workflows/deploy_web_demo.yml'
 
 permissions:
   contents: read
