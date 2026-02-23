@@ -93,6 +93,7 @@ BeforeAfter(
   afterChild: const Image(image: AssetImage('assets/after.jpg'), fit: BoxFit.cover),
 
   interactionOptions: const BeforeAfterInteractionOptions(
+    sliderOrientation: SliderOrientation.horizontal,
     sliderDragMode: SliderDragMode.fullOverlay,
     sliderHitZone: SliderHitZone(
       minLineHalfWidth: 18,
@@ -121,6 +122,18 @@ BeforeAfter(
       dividerWidth: 2,
       thumbSize: 40,
     ),
+  ),
+)
+```
+
+### Vertical slider orientation
+
+```dart
+BeforeAfter(
+  beforeChild: ...,
+  afterChild: ...,
+  interactionOptions: const BeforeAfterInteractionOptions(
+    sliderOrientation: SliderOrientation.vertical,
   ),
 )
 ```

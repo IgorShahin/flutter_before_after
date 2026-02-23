@@ -392,113 +392,116 @@ class _BeforeAfterState extends State<BeforeAfter> {
 
         final baseSize = Size(baseWidth, baseHeight);
 
-        return ValueListenableBuilder<double>(
-          valueListenable: _progressNotifier,
-          builder: (context, progress, _) {
-            Widget buildSceneWithScale(double visualScale) {
-              final sceneSize = baseSize;
-              final visual = _visualGeometry(sceneSize, visualScale);
+        Widget buildSceneWithScale({
+          required double progress,
+          required double visualScale,
+        }) {
+          final sceneSize = baseSize;
+          final visual = _visualGeometry(sceneSize, visualScale);
 
-              final scene = _BeforeAfterScene(
-                fullSize: sceneSize,
-                visual: visual,
-                progress: progress,
-                sideContent: sideContent,
-                enableZoom: _isZoomEnabled,
-                showLabels: _effectiveShowLabels,
-                labelBehavior: _effectiveLabelBehavior,
-                reverseZoomEffectBorderRadius:
-                    _effectiveReverseZoomEffectBorderRadius,
-                overlayBuilder: widget.overlayOptions.builder,
-                overlayStyle: widget.overlayOptions.style,
-                zoomController: _zoomController,
-                orientation: _effectiveSliderOrientation,
-              );
+          final scene = _BeforeAfterScene(
+            fullSize: sceneSize,
+            visual: visual,
+            progress: progress,
+            sideContent: sideContent,
+            enableZoom: _isZoomEnabled,
+            showLabels: _effectiveShowLabels,
+            labelBehavior: _effectiveLabelBehavior,
+            reverseZoomEffectBorderRadius:
+                _effectiveReverseZoomEffectBorderRadius,
+            overlayBuilder: widget.overlayOptions.builder,
+            overlayStyle: widget.overlayOptions.style,
+            zoomController: _zoomController,
+            orientation: _effectiveSliderOrientation,
+          );
 
-              final pointerLayer = Listener(
-                onPointerDown: _onPointerDown,
-                onPointerUp: _onPointerUp,
-                onPointerCancel: _onPointerCancel,
-                onPointerSignal: (event) => _onPointerSignal(event, sceneSize),
-                onPointerPanZoomStart: _onPointerPanZoomStart,
-                onPointerPanZoomUpdate: (event) =>
-                    _onPointerPanZoomUpdate(event, sceneSize),
-                onPointerPanZoomEnd: _onPointerPanZoomEnd,
-                child: scene,
-              );
+          final pointerLayer = Listener(
+            onPointerDown: _onPointerDown,
+            onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerCancel,
+            onPointerSignal: (event) => _onPointerSignal(event, sceneSize),
+            onPointerPanZoomStart: _onPointerPanZoomStart,
+            onPointerPanZoomUpdate: (event) =>
+                _onPointerPanZoomUpdate(event, sceneSize),
+            onPointerPanZoomEnd: _onPointerPanZoomEnd,
+            child: scene,
+          );
 
-              final sceneWithCursor =
-                  _isDesktopLike && _effectiveShowPointerCursor
-                      ? AnimatedBuilder(
-                          animation: _cursorListenable,
-                          child: pointerLayer,
-                          builder: (context, child) {
-                            final canPanZoomedContent = _isZoomEnabled &&
-                                _zoomController.effectiveZoom > 1.001;
-                            final cursor = canPanZoomedContent
-                                ? (_isPrimaryPointerDownNotifier.value
-                                    ? _effectiveZoomedDraggingCursor
-                                    : _effectiveZoomedCursor)
-                                : _effectiveIdleCursor;
-                            return MouseRegion(
-                              cursor: cursor,
-                              child: child!,
-                            );
-                          },
-                        )
-                      : pointerLayer;
+          final sceneWithCursor = _isDesktopLike && _effectiveShowPointerCursor
+              ? AnimatedBuilder(
+                  animation: _cursorListenable,
+                  child: pointerLayer,
+                  builder: (context, child) {
+                    final canPanZoomedContent =
+                        _isZoomEnabled && _zoomController.effectiveZoom > 1.001;
+                    final cursor = canPanZoomedContent
+                        ? (_isPrimaryPointerDownNotifier.value
+                            ? _effectiveZoomedDraggingCursor
+                            : _effectiveZoomedCursor)
+                        : _effectiveIdleCursor;
+                    return MouseRegion(
+                      cursor: cursor,
+                      child: child!,
+                    );
+                  },
+                )
+              : pointerLayer;
 
-              final gestureLayer = GestureDetector(
-                onScaleStart: _onScaleStart,
-                onScaleUpdate: (details) => _onScaleUpdate(details, sceneSize),
-                onScaleEnd: _onScaleEnd,
-                onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled
-                    ? _onDoubleTapDown
-                    : null,
-                onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled
-                    ? () => _onDoubleTap(sceneSize)
-                    : null,
-                child: sceneWithCursor,
-              );
+          final gestureLayer = GestureDetector(
+            onScaleStart: _onScaleStart,
+            onScaleUpdate: (details) => _onScaleUpdate(details, sceneSize),
+            onScaleEnd: _onScaleEnd,
+            onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled
+                ? _onDoubleTapDown
+                : null,
+            onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled
+                ? () => _onDoubleTap(sceneSize)
+                : null,
+            child: sceneWithCursor,
+          );
 
-              return Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: sceneSize.width,
-                  height: sceneSize.height,
-                  child: gestureLayer,
-                ),
-              );
-            }
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: sceneSize.width,
+              height: sceneSize.height,
+              child: gestureLayer,
+            ),
+          );
+        }
+
+        final rebuildListenable = Listenable.merge([
+          _progressNotifier,
+          _containerVisualScaleTargetNotifier,
+        ]);
+
+        return AnimatedBuilder(
+          animation: rebuildListenable,
+          builder: (context, _) {
+            final progress = _progressNotifier.value;
 
             if (!_hasContainerVisualScaleEffect) {
-              return buildSceneWithScale(1.0);
+              return buildSceneWithScale(progress: progress, visualScale: 1.0);
             }
 
             if (_effectiveEnableContainerScaleOnZoom) {
-              return ValueListenableBuilder<double>(
-                valueListenable: _containerVisualScaleTargetNotifier,
-                builder: (context, visualScale, _) {
-                  return buildSceneWithScale(visualScale);
-                },
+              return buildSceneWithScale(
+                progress: progress,
+                visualScale: _containerVisualScaleTarget,
               );
             }
 
-            return ValueListenableBuilder<double>(
-              valueListenable: _containerVisualScaleTargetNotifier,
-              builder: (context, visualScaleTarget, _) {
-                return TweenAnimationBuilder<double>(
-                  tween: Tween<double>(
-                    begin: 1.0,
-                    end: _hasContainerVisualScaleEffect
-                        ? visualScaleTarget
-                        : 1.0,
-                  ),
-                  duration: const Duration(milliseconds: 160),
-                  curve: Curves.easeInOutCubic,
-                  builder: (context, visualScale, _) {
-                    return buildSceneWithScale(visualScale);
-                  },
+            return TweenAnimationBuilder<double>(
+              tween: Tween<double>(
+                begin: 1.0,
+                end: _containerVisualScaleTarget,
+              ),
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeInOutCubic,
+              builder: (context, visualScale, _) {
+                return buildSceneWithScale(
+                  progress: progress,
+                  visualScale: visualScale,
                 );
               },
             );

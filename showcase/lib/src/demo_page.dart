@@ -46,77 +46,10 @@ class _DemoPageState extends State<DemoPage> {
                     children: [
                       HeaderSection(profile: profile, isWide: isWide),
                       const SizedBox(height: 18),
-                      ListenableBuilder(
-                        listenable: _controller,
-                        builder: (context, _) {
-                          final card = DemoCard(
-                            profile: profile,
-                            progress: _controller.progress,
-                            zoomController: _controller.zoomController,
-                            showLabels: _controller.showLabels,
-                            labelBehavior: _controller.labelBehavior,
-                            dragMode: _controller.dragMode,
-                            enableDoubleTapZoom:
-                                _controller.enableDoubleTapZoom,
-                            enableContainerScale:
-                                _controller.enableContainerScale,
-                            containerScaleMax: _controller.containerScaleMax,
-                            containerScaleZoomRange:
-                                _controller.containerScaleZoomRange,
-                          );
-                          final panel = ControlPanel(
-                            profile: profile,
-                            progress: _controller.progress,
-                            onResetZoom: _controller.resetZoom,
-                            onPrepareWebDemo: _controller.prepareWebDemo,
-                            showLabels: _controller.showLabels,
-                            onShowLabelsChanged: _controller.setShowLabels,
-                            enableDoubleTapZoom:
-                                _controller.enableDoubleTapZoom,
-                            onEnableDoubleTapZoomChanged:
-                                _controller.setEnableDoubleTapZoom,
-                            enableContainerScale:
-                                _controller.enableContainerScale,
-                            onEnableContainerScaleChanged:
-                                _controller.setEnableContainerScale,
-                            containerScaleMax: _controller.containerScaleMax,
-                            onContainerScaleMaxChanged:
-                                _controller.setContainerScaleMax,
-                            containerScaleZoomRange:
-                                _controller.containerScaleZoomRange,
-                            onContainerScaleZoomRangeChanged:
-                                _controller.setContainerScaleZoomRange,
-                            containerScalePreset:
-                                _controller.containerScalePreset,
-                            onContainerScalePresetChanged:
-                                _controller.applyContainerScalePreset,
-                            dragMode: _controller.dragMode,
-                            onDragModeChanged: _controller.setDragMode,
-                            labelBehavior: _controller.labelBehavior,
-                            onLabelBehaviorChanged:
-                                _controller.setLabelBehavior,
-                          );
-
-                          if (isWide) {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(flex: 7, child: card),
-                                const SizedBox(width: 16),
-                                Expanded(flex: 4, child: panel),
-                              ],
-                            );
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              card,
-                              const SizedBox(height: 16),
-                              panel,
-                            ],
-                          );
-                        },
+                      _DemoScene(
+                        controller: _controller,
+                        profile: profile,
+                        isWide: isWide,
                       ),
                       const SizedBox(height: 18),
                       InfoSection(profile: profile),
@@ -128,6 +61,88 @@ class _DemoPageState extends State<DemoPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _DemoScene extends StatelessWidget {
+  const _DemoScene({
+    required this.controller,
+    required this.profile,
+    required this.isWide,
+  });
+
+  final DemoController controller;
+  final DemoPlatformProfile profile;
+  final bool isWide;
+
+  @override
+  Widget build(BuildContext context) {
+    final card = ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        return DemoCard(
+          profile: profile,
+          progress: controller.progress,
+          zoomController: controller.zoomController,
+          showLabels: controller.showLabels,
+          labelBehavior: controller.labelBehavior,
+          dragMode: controller.dragMode,
+          enableDoubleTapZoom: controller.enableDoubleTapZoom,
+          enableContainerScale: controller.enableContainerScale,
+          containerScaleMax: controller.containerScaleMax,
+          containerScaleZoomRange: controller.containerScaleZoomRange,
+        );
+      },
+    );
+
+    final panel = ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        return ControlPanel(
+          profile: profile,
+          progress: controller.progress,
+          onResetZoom: controller.resetZoom,
+          onPrepareWebDemo: controller.prepareWebDemo,
+          showLabels: controller.showLabels,
+          onShowLabelsChanged: controller.setShowLabels,
+          enableDoubleTapZoom: controller.enableDoubleTapZoom,
+          onEnableDoubleTapZoomChanged: controller.setEnableDoubleTapZoom,
+          enableContainerScale: controller.enableContainerScale,
+          onEnableContainerScaleChanged: controller.setEnableContainerScale,
+          containerScaleMax: controller.containerScaleMax,
+          onContainerScaleMaxChanged: controller.setContainerScaleMax,
+          containerScaleZoomRange: controller.containerScaleZoomRange,
+          onContainerScaleZoomRangeChanged:
+              controller.setContainerScaleZoomRange,
+          containerScalePreset: controller.containerScalePreset,
+          onContainerScalePresetChanged: controller.applyContainerScalePreset,
+          dragMode: controller.dragMode,
+          onDragModeChanged: controller.setDragMode,
+          labelBehavior: controller.labelBehavior,
+          onLabelBehaviorChanged: controller.setLabelBehavior,
+        );
+      },
+    );
+
+    if (isWide) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 7, child: card),
+          const SizedBox(width: 16),
+          Expanded(flex: 4, child: panel),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card,
+        const SizedBox(height: 16),
+        panel,
+      ],
     );
   }
 }

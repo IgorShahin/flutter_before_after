@@ -1,0 +1,45 @@
+name: Benchmark Drag Zoom
+
+on:
+  workflow_dispatch:
+
+jobs:
+  web_benchmark:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: example
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable web
+        run: flutter config --enable-web
+
+      - name: Install example dependencies
+        run: flutter pub get
+
+      - name: Run drag+zoom benchmark (Chrome)
+        run: |
+          flutter test integration_test/drag_zoom_benchmark_test.dart -d chrome --reporter expanded | tee benchmark.log
+
+      - name: Publish benchmark summary
+        run: |
+          {
+            echo "## Drag/Zoom benchmark"
+            echo ""
+            grep -E "before_after_drag_zoom summary|avg_build_ms|avg_raster_ms|missed_build_budget|frame_count" benchmark.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark log
+        uses: actions/upload-artifact@v4
+        with:
+          name: drag-zoom-benchmark-log
+          path: example/benchmark.log
