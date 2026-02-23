@@ -19,6 +19,7 @@ class DemoController extends ChangeNotifier {
   ContainerScalePreset _containerScalePreset = ContainerScalePreset.aggressive;
   SliderDragMode _dragMode = SliderDragMode.fullOverlay;
   LabelBehavior _labelBehavior = LabelBehavior.attachedToContent;
+  SliderOrientation _sliderOrientation = SliderOrientation.horizontal;
 
   bool get showLabels => _showLabels;
   bool get enableDoubleTapZoom => _enableDoubleTapZoom;
@@ -28,6 +29,7 @@ class DemoController extends ChangeNotifier {
   ContainerScalePreset get containerScalePreset => _containerScalePreset;
   SliderDragMode get dragMode => _dragMode;
   LabelBehavior get labelBehavior => _labelBehavior;
+  SliderOrientation get sliderOrientation => _sliderOrientation;
 
   void setShowLabels(bool value) {
     if (_showLabels == value) return;
@@ -103,6 +105,12 @@ class DemoController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setSliderOrientation(SliderOrientation value) {
+    if (_sliderOrientation == value) return;
+    _sliderOrientation = value;
+    notifyListeners();
+  }
+
   void resetZoom() {
     zoomController.reset();
   }
@@ -114,6 +122,7 @@ class DemoController extends ChangeNotifier {
     _enableContainerScale = true;
     _dragMode = SliderDragMode.fullOverlay;
     _labelBehavior = LabelBehavior.attachedToContent;
+    _sliderOrientation = SliderOrientation.horizontal;
     applyContainerScalePreset(ContainerScalePreset.aggressive);
     zoomController.reset();
   }

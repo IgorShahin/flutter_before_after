@@ -8,6 +8,6 @@ void main() {
   testWidgets('renders showcase app', (tester) async {
     await tester.pumpWidget(const DemoApp());
 
-    expect(find.text('Web Demo Showcase'), findsOneWidget);
+    expect(find.text('Before/After Showcase'), findsOneWidget);
   });
 }

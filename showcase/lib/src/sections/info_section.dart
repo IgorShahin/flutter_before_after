@@ -14,21 +14,14 @@ class InfoSection extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD6E2F6)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F0C254A),
-            blurRadius: 20,
-            offset: Offset(0, 10),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFDCE5F5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Capabilities',
+            'What this demo proves',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -38,14 +31,13 @@ class InfoSection extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              const StatPill(text: 'Drag divider'),
-              if (profile.isMobile) const StatPill(text: 'Pinch zoom'),
+              const StatPill(text: 'Any widget as before/after'),
+              const StatPill(text: 'Horizontal + vertical slider'),
+              const StatPill(text: 'High precision drag hit zone'),
+              if (profile.isMobile) const StatPill(text: 'Pinch + pan'),
               if (!profile.isMobile)
-                StatPill(text: '${profile.modifierLabel} + wheel'),
-              const StatPill(text: 'Double-tap zoom'),
-              const StatPill(text: 'Container scale demo'),
-              const StatPill(text: 'Custom overlay'),
-              const StatPill(text: 'Label behavior modes'),
+                StatPill(text: '${profile.modifierLabel} + wheel zoom'),
+              const StatPill(text: 'Container scale effect'),
             ],
           ),
         ],

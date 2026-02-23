@@ -61,10 +61,6 @@ class DemoPlatformProfile {
     return 'Mobile';
   }
 
-  bool get showPrepareSceneButton => isWeb || isDesktop;
-
-  String get prepareButtonLabel => isWeb ? 'Prepare Web' : 'Prepare Scene';
-
   String get modifierLabel {
     if (isMobile) return 'Pinch';
     if (defaultTargetPlatform == TargetPlatform.macOS || isWeb) {
@@ -75,27 +71,9 @@ class DemoPlatformProfile {
 
   String get interactionHint {
     if (isMobile) {
-      return 'Use pinch and pan in the center Expanded area. '
-          'Header/footer stay fixed while BeforeAfter expands.';
+      return 'Pinch to zoom, drag to pan, and move slider to compare.';
     }
-    return 'Hold $modifierLabel and scroll in the center Expanded area. '
-        'Header/footer stay fixed while BeforeAfter expands.';
-  }
-
-  List<String> get stepByStep {
-    if (isMobile) {
-      return const [
-        '1. Use two fingers over preview.',
-        '2. Pinch to zoom and pan.',
-        '3. Observe expansion in the center Expanded zone.',
-      ];
-    }
-    return [
-      '1. Click "$prepareButtonLabel".',
-      '2. Place cursor in the center Expanded area.',
-      '3. Hold $modifierLabel.',
-      '4. Scroll to zoom and watch frame expansion.',
-    ];
+    return 'Hold $modifierLabel and scroll to zoom, then drag to pan.';
   }
 
   double get previewHeight {

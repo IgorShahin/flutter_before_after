@@ -13,6 +13,7 @@ class DemoCard extends StatelessWidget {
     required this.showLabels,
     required this.labelBehavior,
     required this.dragMode,
+    required this.sliderOrientation,
     required this.enableDoubleTapZoom,
     required this.enableContainerScale,
     required this.containerScaleMax,
@@ -25,6 +26,7 @@ class DemoCard extends StatelessWidget {
   final bool showLabels;
   final LabelBehavior labelBehavior;
   final SliderDragMode dragMode;
+  final SliderOrientation sliderOrientation;
   final bool enableDoubleTapZoom;
   final bool enableContainerScale;
   final double containerScaleMax;
@@ -33,18 +35,21 @@ class DemoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isCompact = profile.isMobile;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFFFFF), Color(0xFFF9FBFF)],
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD6E2F6)),
+        border: Border.all(color: const Color(0xFFD8E4FA)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x120C254A),
-            blurRadius: 24,
+            color: Color(0x140C254A),
+            blurRadius: 26,
             offset: Offset(0, 12),
           ),
         ],
@@ -63,7 +68,7 @@ class DemoCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              if (!isCompact) const StatPill(text: 'Desktop + Mobile'),
+              if (!profile.isMobile) const StatPill(text: 'Desktop + Mobile'),
               StatPill(text: enableContainerScale ? 'Scale: ON' : 'Scale: OFF'),
             ],
           ),
@@ -114,11 +119,11 @@ class DemoCard extends StatelessWidget {
           SizedBox(
             height: profile.previewHeight,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
-                  border: Border.all(color: const Color(0xFF27374D)),
+                  color: const Color(0xFF0F172A),
+                  border: Border.all(color: const Color(0xFF263850)),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x66000000),
@@ -127,71 +132,58 @@ class DemoCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    _HostStrip(
-                        text: isCompact
-                            ? 'Header (fixed)'
-                            : 'Static header (outside Expanded)'),
-                    Expanded(
-                      child: ValueListenableBuilder<double>(
-                        valueListenable: progress,
-                        builder: (context, value, _) {
-                          return BeforeAfter(
-                            viewportAspectRatio: 3 / 4,
-                            beforeChild: Image.asset(
-                              'assets/before.jpeg',
-                              fit: BoxFit.cover,
-                            ),
-                            afterChild: Image.asset(
-                              'assets/after.jpeg',
-                              fit: BoxFit.cover,
-                            ),
-                            progress: value,
-                            onProgressChanged: (next) => progress.value = next,
-                            labelsOptions: BeforeAfterLabelsOptions(
-                              show: showLabels,
-                              behavior: labelBehavior,
-                              beforeBuilder: (_) => _label(
-                                text: 'Before',
-                                color: Colors.black.withValues(alpha: 0.78),
-                              ),
-                              afterBuilder: (_) => _label(
-                                text: 'After',
-                                color: const Color(0xFF1E6FA8)
-                                    .withValues(alpha: 0.90),
-                              ),
-                            ),
-                            interactionOptions: BeforeAfterInteractionOptions(
-                              sliderDragMode: dragMode,
-                              sliderHitZone: const SliderHitZone(
-                                minLineHalfWidth: 18,
-                                minThumbRadius: 30,
-                              ),
-                            ),
-                            zoomOptions: BeforeAfterZoomOptions(
-                              zoomPanSensitivity: 0.95,
-                              showPointerCursor: true,
-                              enableDoubleTapZoom: enableDoubleTapZoom,
-                              enableContainerScaleOnZoom: enableContainerScale,
-                              containerScaleMax: containerScaleMax,
-                              containerScaleZoomRange: containerScaleZoomRange,
-                              reverseZoomEffectBorderRadius: 12,
-                              pointer: const PointerZoomOptions(
-                                requiresModifier: true,
-                                smoothing: 0.4,
-                              ),
-                            ),
-                            zoomController: zoomController,
-                          );
-                        },
+                child: ValueListenableBuilder<double>(
+                  valueListenable: progress,
+                  builder: (context, value, _) {
+                    return BeforeAfter(
+                      viewportAspectRatio: 3 / 4,
+                      beforeChild: Image.asset(
+                        'assets/before.jpeg',
+                        fit: BoxFit.cover,
                       ),
-                    ),
-                    _HostStrip(
-                        text: isCompact
-                            ? 'Footer (fixed)'
-                            : 'Static footer (outside Expanded)'),
-                  ],
+                      afterChild: Image.asset(
+                        'assets/after.jpeg',
+                        fit: BoxFit.cover,
+                      ),
+                      progress: value,
+                      onProgressChanged: (next) => progress.value = next,
+                      labelsOptions: BeforeAfterLabelsOptions(
+                        show: showLabels,
+                        behavior: labelBehavior,
+                        beforeBuilder: (_) => _label(
+                          text: 'Before',
+                          color: Colors.black.withValues(alpha: 0.78),
+                        ),
+                        afterBuilder: (_) => _label(
+                          text: 'After',
+                          color:
+                              const Color(0xFF1E6FA8).withValues(alpha: 0.90),
+                        ),
+                      ),
+                      interactionOptions: BeforeAfterInteractionOptions(
+                        sliderOrientation: sliderOrientation,
+                        sliderDragMode: dragMode,
+                        sliderHitZone: const SliderHitZone(
+                          minLineHalfWidth: 18,
+                          minThumbRadius: 30,
+                        ),
+                      ),
+                      zoomOptions: BeforeAfterZoomOptions(
+                        zoomPanSensitivity: 0.95,
+                        showPointerCursor: true,
+                        enableDoubleTapZoom: enableDoubleTapZoom,
+                        enableContainerScaleOnZoom: enableContainerScale,
+                        containerScaleMax: containerScaleMax,
+                        containerScaleZoomRange: containerScaleZoomRange,
+                        reverseZoomEffectBorderRadius: 12,
+                        pointer: const PointerZoomOptions(
+                          requiresModifier: true,
+                          smoothing: 0.4,
+                        ),
+                      ),
+                      zoomController: zoomController,
+                    );
+                  },
                 ),
               ),
             ),
@@ -249,33 +241,4 @@ class _ContainerScaleInfo {
 
   final double scale;
   final double progressPercent;
-}
-
-class _HostStrip extends StatelessWidget {
-  const _HostStrip({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF1F2937), Color(0xFF253549)],
-        ),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFFD1D5DB),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 }

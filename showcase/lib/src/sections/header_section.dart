@@ -11,23 +11,21 @@ class HeaderSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isCompact = !isWide;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFF3F8FF)],
+          colors: [Color(0xFF0F172A), Color(0xFF19315A)],
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD6E2F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x120C254A),
-            blurRadius: 22,
-            offset: Offset(0, 10),
+            color: Color(0x2A0C172A),
+            blurRadius: 30,
+            offset: Offset(0, 16),
           ),
         ],
       ),
@@ -37,41 +35,30 @@ class HeaderSection extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'before_after_slider',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              _miniBadge(profile.platformBadge),
-              if (!isCompact) _miniBadge('Interactive'),
+              _badge('before_after_slider'),
+              _badge(profile.platformBadge),
+              if (isWide) _badge('Interactive demo'),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
-            profile.title,
+            'Before/After Showcase',
             style: (isWide
                     ? theme.textTheme.headlineMedium
                     : theme.textTheme.headlineSmall)
-                ?.copyWith(fontWeight: FontWeight.w800, height: 1.1),
+                ?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            'A polished interactive demo of divider drag, zoom behavior, and container expansion in an Expanded layout.',
+            'A clean playground focused on real usage: compare, drag, zoom, and tune behavior live.',
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.35,
+              color: const Color(0xFFC5D4EC),
+              height: 1.3,
             ),
           ),
         ],
@@ -79,20 +66,21 @@ class HeaderSection extends StatelessWidget {
     );
   }
 
-  static Widget _miniBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+  Widget _badge(String text) {
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F4FB),
+        color: const Color(0x1FFFFFFF),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFDDE6F5)),
+        border: Border.all(color: const Color(0x55FFFFFF)),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF374151),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Color(0xFFE6EEF9),
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
