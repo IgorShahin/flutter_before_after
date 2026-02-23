@@ -102,9 +102,11 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     return Offset(dx, dy);
   }
 
-  void _updateProgress(double screenX, Size fullSize) {
+  void _updateProgress(Offset localPosition, Size fullSize) {
     final visual = _currentVisualGeometry(fullSize);
-    final next = ((screenX - visual.offsetX) / visual.width).clamp(0.0, 1.0);
+    final next = _effectiveSliderOrientation == SliderOrientation.horizontal
+        ? ((localPosition.dx - visual.offsetX) / visual.width).clamp(0.0, 1.0)
+        : ((localPosition.dy - visual.offsetY) / visual.height).clamp(0.0, 1.0);
     if ((_progressNotifier.value - next).abs() > _dragThreshold) {
       _progressNotifier.value = next;
       _queueProgressChangedCallback(next);
@@ -117,42 +119,60 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     double progress,
   ) {
     final visual = _currentVisualGeometry(fullSize);
+    final isHorizontal =
+        _effectiveSliderOrientation == SliderOrientation.horizontal;
     final dividerScreenX = visual.offsetX + progress * visual.width;
+    final dividerScreenY = visual.offsetY + progress * visual.height;
     final style = widget.overlayOptions.style;
-    final thumbCenterY = style.verticalThumbMove
-        ? visual.offsetY + visual.height / 2
-        : visual.offsetY + visual.height * (style.thumbPositionPercent / 100.0);
+    final thumbCenter = isHorizontal
+        ? Offset(
+            dividerScreenX,
+            style.verticalThumbMove
+                ? visual.offsetY + visual.height / 2
+                : visual.offsetY +
+                    visual.height * (style.thumbPositionPercent / 100.0),
+          )
+        : Offset(
+            style.verticalThumbMove
+                ? visual.offsetX + visual.width / 2
+                : visual.offsetX +
+                    visual.width * (style.thumbPositionPercent / 100.0),
+            dividerScreenY,
+          );
     final zoom = _zoomController.effectiveZoom;
 
     switch (_effectiveSliderDragMode) {
       case SliderDragMode.thumbOnly:
-        if (_isOnThumb(localPosition, dividerScreenX, thumbCenterY)) {
+        if (_isOnThumb(localPosition, thumbCenter)) {
           return true;
         }
         return _effectiveSliderHitZone.allowLineFallbackWhenThumbOnlyZoomed &&
             zoom > 1.001 &&
             _isOnOverlayLine(
               localPosition,
-              dividerScreenX,
-              visual.offsetY,
-              visual.height,
+              dividerScreen: isHorizontal ? dividerScreenX : dividerScreenY,
+              crossAxisStart: isHorizontal ? visual.offsetY : visual.offsetX,
+              crossAxisExtent: isHorizontal ? visual.height : visual.width,
+              isHorizontal: isHorizontal,
             );
       case SliderDragMode.fullOverlay:
         return _isOnOverlayLine(
           localPosition,
-          dividerScreenX,
-          visual.offsetY,
-          visual.height,
+          dividerScreen: isHorizontal ? dividerScreenX : dividerScreenY,
+          crossAxisStart: isHorizontal ? visual.offsetY : visual.offsetX,
+          crossAxisExtent: isHorizontal ? visual.height : visual.width,
+          isHorizontal: isHorizontal,
         );
     }
   }
 
   bool _isOnOverlayLine(
-    Offset localPosition,
-    double dividerScreenX,
-    double offsetY,
-    double visualHeight,
-  ) {
+    Offset localPosition, {
+    required double dividerScreen,
+    required double crossAxisStart,
+    required double crossAxisExtent,
+    required bool isHorizontal,
+  }) {
     final style = widget.overlayOptions.style;
     final thumbSize = style.thumbSize;
     final dividerWidth = style.dividerWidth;
@@ -163,17 +183,20 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
           math.max(dividerWidth * 2, zone.minLineHalfWidth),
         ) +
         zoomBoost;
-    final dx = (localPosition.dx - dividerScreenX).abs();
+    final axisDistance = isHorizontal
+        ? (localPosition.dx - dividerScreen).abs()
+        : (localPosition.dy - dividerScreen).abs();
     final verticalPadding = zone.verticalPadding + zoomBoost * 0.5;
-    final withinVertical = localPosition.dy >= offsetY - verticalPadding &&
-        localPosition.dy <= offsetY + visualHeight + verticalPadding;
-    return dx <= hitHalfWidth && withinVertical;
+    final crossAxisValue = isHorizontal ? localPosition.dy : localPosition.dx;
+    final withinCrossAxis = crossAxisValue >=
+            crossAxisStart - verticalPadding &&
+        crossAxisValue <= crossAxisStart + crossAxisExtent + verticalPadding;
+    return axisDistance <= hitHalfWidth && withinCrossAxis;
   }
 
   bool _isOnThumb(
     Offset localPosition,
-    double dividerScreenX,
-    double thumbCenterY,
+    Offset thumbCenter,
   ) {
     final style = widget.overlayOptions.style;
     final thumbSize = style.thumbSize;
@@ -181,8 +204,8 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
     final zoomBoost = _sliderZoomBoost(zone);
     final hitRadius = math.max(thumbSize / 2, zone.minThumbRadius) + zoomBoost;
 
-    final dx = (localPosition.dx - dividerScreenX).abs();
-    final dy = (localPosition.dy - thumbCenterY).abs();
+    final dx = (localPosition.dx - thumbCenter.dx).abs();
+    final dy = (localPosition.dy - thumbCenter.dy).abs();
 
     if (style.thumbShape == BoxShape.circle) {
       final squaredDistance = dx * dx + dy * dy;
@@ -218,7 +241,7 @@ extension _BeforeAfterGesturesX on _BeforeAfterState {
 
   void _onScaleUpdate(ScaleUpdateDetails details, Size fullSize) {
     if (_gesture.isDragging) {
-      _updateProgress(details.localFocalPoint.dx, fullSize);
+      _updateProgress(details.localFocalPoint, fullSize);
       return;
     }
 

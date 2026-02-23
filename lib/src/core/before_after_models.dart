@@ -61,3 +61,35 @@ class _RightRectClipper extends CustomClipper<Rect> {
     return dividerX != oldClipper.dividerX;
   }
 }
+
+class _TopRectClipper extends CustomClipper<Rect> {
+  _TopRectClipper(this.dividerY);
+
+  final double dividerY;
+
+  @override
+  Rect getClip(Size size) {
+    return Rect.fromLTRB(0, 0, size.width, dividerY);
+  }
+
+  @override
+  bool shouldReclip(_TopRectClipper oldClipper) {
+    return dividerY != oldClipper.dividerY;
+  }
+}
+
+class _BottomRectClipper extends CustomClipper<Rect> {
+  _BottomRectClipper(this.dividerY);
+
+  final double dividerY;
+
+  @override
+  Rect getClip(Size size) {
+    return Rect.fromLTRB(0, dividerY, size.width, size.height);
+  }
+
+  @override
+  bool shouldReclip(_BottomRectClipper oldClipper) {
+    return dividerY != oldClipper.dividerY;
+  }
+}

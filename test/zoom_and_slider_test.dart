@@ -567,6 +567,43 @@ void main() {
       expect(callbackValue, isNull);
     });
 
+    testWidgets('vertical slider orientation updates progress by Y drag',
+        (tester) async {
+      double progress = 0.5;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 320,
+                  height: 480,
+                  child: BeforeAfter(
+                    beforeChild: const ColoredBox(color: Colors.red),
+                    afterChild: const ColoredBox(color: Colors.blue),
+                    progress: progress,
+                    interactionOptions: const BeforeAfterInteractionOptions(
+                      sliderOrientation: SliderOrientation.vertical,
+                    ),
+                    onProgressChanged: (value) =>
+                        setState(() => progress = value),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      final beforeAfter = find.byType(BeforeAfter);
+      final start = tester.getCenter(beforeAfter);
+      await tester.dragFrom(start, const Offset(0, 120));
+      await tester.pumpAndSettle();
+
+      expect(progress, greaterThan(0.5));
+    });
+
     testWidgets('zoomOptions.enabled disables zoom interactions',
         (tester) async {
       final controller = ZoomController();

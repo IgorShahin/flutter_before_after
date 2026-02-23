@@ -10,6 +10,7 @@ import 'controllers/zoom_controller.dart';
 import 'enums/content_order.dart';
 import 'enums/label_behavior.dart';
 import 'enums/slider_drag_mode.dart';
+import 'enums/slider_orientation.dart';
 import 'options/before_after_interaction_options.dart';
 import 'options/before_after_labels_options.dart';
 import 'options/before_after_overlay_options.dart';
@@ -362,6 +363,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                 overlayBuilder: widget.overlayOptions.builder,
                 overlayStyle: widget.overlayOptions.style,
                 zoomController: _zoomController,
+                orientation: _effectiveSliderOrientation,
               );
 
               final pointerLayer = Listener(

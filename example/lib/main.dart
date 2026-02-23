@@ -28,6 +28,7 @@ class ExamplePage extends StatefulWidget {
 
 class _ExamplePageState extends State<ExamplePage> {
   double _progress = 0.5;
+  SliderOrientation _orientation = SliderOrientation.horizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +41,41 @@ class _ExamplePageState extends State<ExamplePage> {
           children: [
             Expanded(
               child: BeforeAfter(
+                autoViewportAspectRatioFromImage: true,
                 beforeChild:
                     Image.asset('assets/before.jpeg', fit: BoxFit.cover),
                 afterChild: Image.asset('assets/after.jpeg', fit: BoxFit.cover),
                 progress: _progress,
                 onProgressChanged: (value) => setState(() => _progress = value),
+                interactionOptions: BeforeAfterInteractionOptions(
+                  sliderOrientation: _orientation,
+                ),
+                zoomOptions: BeforeAfterZoomOptions(
+                  enableContainerScaleOnZoom: true,
+                  reverseZoomEffectBorderRadius: 16,
+                ),
               ),
             ),
             const SizedBox(height: 12),
+            SegmentedButton<SliderOrientation>(
+              segments: const [
+                ButtonSegment<SliderOrientation>(
+                  value: SliderOrientation.horizontal,
+                  label: Text('Horizontal'),
+                ),
+                ButtonSegment<SliderOrientation>(
+                  value: SliderOrientation.vertical,
+                  label: Text('Vertical'),
+                ),
+              ],
+              selected: {_orientation},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _orientation = selection.first;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
             Slider(
               value: _progress,
               onChanged: (value) => setState(() => _progress = value),

@@ -72,6 +72,9 @@ extension _BeforeAfterConfigX on _BeforeAfterState {
   SliderDragMode get _effectiveSliderDragMode =>
       widget.interactionOptions.sliderDragMode;
 
+  SliderOrientation get _effectiveSliderOrientation =>
+      widget.interactionOptions.sliderOrientation;
+
   SliderHitZone get _effectiveSliderHitZone =>
       widget.interactionOptions.sliderHitZone;
 

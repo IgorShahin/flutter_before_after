@@ -37,6 +37,7 @@ export 'src/controllers/zoom_controller.dart';
 export 'src/enums/content_order.dart';
 export 'src/enums/label_behavior.dart';
 export 'src/enums/slider_drag_mode.dart';
+export 'src/enums/slider_orientation.dart';
 export 'src/options/before_after_interaction_options.dart';
 export 'src/options/before_after_labels_options.dart';
 export 'src/options/before_after_overlay_options.dart';

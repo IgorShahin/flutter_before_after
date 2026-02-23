@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../enums/slider_orientation.dart';
 import '../options/overlay_style.dart';
 
 /// Default overlay widget that displays a divider line and draggable thumb.
@@ -10,6 +11,7 @@ class DefaultOverlay extends StatelessWidget {
     required this.width,
     required this.height,
     required this.position,
+    this.orientation = SliderOrientation.horizontal,
     this.style = const OverlayStyle(),
   });
 
@@ -22,12 +24,30 @@ class DefaultOverlay extends StatelessWidget {
   /// Current position of the divider (x coordinate).
   final Offset position;
 
+  /// Divider orientation.
+  final SliderOrientation orientation;
+
   /// Style configuration for the overlay.
   final OverlayStyle style;
 
   @override
   Widget build(BuildContext context) {
-    final thumbY = style.verticalThumbMove ? position.dy : height * (style.thumbPositionPercent / 100.0);
+    final isHorizontal = orientation == SliderOrientation.horizontal;
+    final thumbY = isHorizontal
+        ? (style.verticalThumbMove
+            ? position.dy
+            : height * (style.thumbPositionPercent / 100.0))
+        : position.dy;
+    final thumbX = isHorizontal
+        ? position.dx
+        : (style.verticalThumbMove
+            ? position.dx
+            : width * (style.thumbPositionPercent / 100.0));
+    final icon = isHorizontal
+        ? style.thumbIcon
+        : (style.thumbIcon == Icons.swap_horiz
+            ? Icons.swap_vert
+            : style.thumbIcon);
 
     return SizedBox(
       width: width,
@@ -36,18 +56,20 @@ class DefaultOverlay extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            left: position.dx - style.dividerWidth / 2,
-            top: 0,
-            bottom: 0,
+            left: isHorizontal ? position.dx - style.dividerWidth / 2 : 0,
+            right: isHorizontal ? null : 0,
+            top: isHorizontal ? 0 : position.dy - style.dividerWidth / 2,
+            bottom: isHorizontal ? 0 : null,
             child: Container(
-              width: style.dividerWidth,
+              width: isHorizontal ? style.dividerWidth : null,
+              height: isHorizontal ? null : style.dividerWidth,
               decoration: BoxDecoration(
                 color: style.dividerColor,
               ),
             ),
           ),
           Positioned(
-            left: position.dx - style.thumbSize / 2,
+            left: thumbX - style.thumbSize / 2,
             top: thumbY - style.thumbSize / 2,
             child: Container(
               width: style.thumbSize,
@@ -66,7 +88,7 @@ class DefaultOverlay extends StatelessWidget {
                     : null,
               ),
               child: Icon(
-                style.thumbIcon,
+                icon,
                 color: style.thumbIconColor,
                 size: style.thumbSize * 0.6,
               ),
