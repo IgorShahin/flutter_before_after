@@ -1,3 +1,10 @@
+## 3.1.0
+
+- Added `SliderOrientation` support (`horizontal` / `vertical`).
+- Improved gesture/render performance in slider and zoom paths.
+- Improved pinch responsiveness during active scale gesture.
+- Optimized showcase rebuild behavior and simplified showcase controls.
+
 ## 3.0.0
 
 ### Breaking

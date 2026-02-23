@@ -22,15 +22,10 @@ import 'widgets/default_overlay.dart';
 import 'widgets/labels.dart';
 
 part 'core/before_after_config.dart';
-
 part 'core/before_after_gesture_state.dart';
-
 part 'core/before_after_gestures.dart';
-
 part 'core/before_after_labels.dart';
-
 part 'core/before_after_models.dart';
-
 part 'core/before_after_scene.dart';
 
 /// A unified before/after comparison widget for arbitrary widgets.
@@ -154,8 +149,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
     if (widget.progress != null && widget.progress != _progressNotifier.value) {
       _progressNotifier.value = widget.progress!;
     }
-    final zoomControllerChanged =
-        widget.zoomController != oldWidget.zoomController;
+    final zoomControllerChanged = widget.zoomController != oldWidget.zoomController;
     final runtimeChangedForInternalController = widget.zoomController == null &&
         oldWidget.zoomController == null &&
         widget.zoomOptions.runtime != oldWidget.zoomOptions.runtime;
@@ -185,15 +179,13 @@ class _BeforeAfterState extends State<BeforeAfter> {
     }
 
     if (widget.viewportAspectRatio != oldWidget.viewportAspectRatio ||
-        widget.autoViewportAspectRatioFromImage !=
-            oldWidget.autoViewportAspectRatioFromImage ||
+        widget.autoViewportAspectRatioFromImage != oldWidget.autoViewportAspectRatioFromImage ||
         widget.beforeChild != oldWidget.beforeChild ||
         widget.afterChild != oldWidget.afterChild) {
       _resolveAutoViewportAspectRatio();
     }
 
-    if (widget.labelsOptions != oldWidget.labelsOptions ||
-        widget.contentOrder != oldWidget.contentOrder) {
+    if (widget.labelsOptions != oldWidget.labelsOptions || widget.contentOrder != oldWidget.contentOrder) {
       _markLabelsCacheDirty();
     }
   }
@@ -272,16 +264,14 @@ class _BeforeAfterState extends State<BeforeAfter> {
   }
 
   void _ensureCachedLabels(BuildContext context) {
-    if (!_labelsCacheDirty &&
-        _cachedLeftLabel != null &&
-        _cachedRightLabel != null) {
+    if (!_labelsCacheDirty && _cachedLeftLabel != null && _cachedRightLabel != null) {
       return;
     }
 
-    final beforeLabel = widget.labelsOptions.beforeBuilder?.call(context) ??
-        BeforeLabel(contentOrder: widget.contentOrder);
-    final afterLabel = widget.labelsOptions.afterBuilder?.call(context) ??
-        AfterLabel(contentOrder: widget.contentOrder);
+    final beforeLabel =
+        widget.labelsOptions.beforeBuilder?.call(context) ?? BeforeLabel(contentOrder: widget.contentOrder);
+    final afterLabel =
+        widget.labelsOptions.afterBuilder?.call(context) ?? AfterLabel(contentOrder: widget.contentOrder);
 
     if (widget.contentOrder == ContentOrder.beforeAfter) {
       _cachedLeftLabel = beforeLabel;
@@ -295,15 +285,13 @@ class _BeforeAfterState extends State<BeforeAfter> {
   }
 
   void _resolveAutoViewportAspectRatio() {
-    if (!widget.autoViewportAspectRatioFromImage ||
-        widget.viewportAspectRatio != null) {
+    if (!widget.autoViewportAspectRatioFromImage || widget.viewportAspectRatio != null) {
       _stopAutoAspectRatioListener();
       _setAutoViewportAspectRatio(null);
       return;
     }
 
-    final provider = _extractImageProvider(widget.beforeChild) ??
-        _extractImageProvider(widget.afterChild);
+    final provider = _extractImageProvider(widget.beforeChild) ?? _extractImageProvider(widget.afterChild);
     if (provider == null) {
       _stopAutoAspectRatioListener();
       _setAutoViewportAspectRatio(null);
@@ -312,8 +300,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
 
     final configuration = createLocalImageConfiguration(context);
     final providerUnchanged = _autoAspectImageProvider == provider;
-    final configurationUnchanged =
-        _autoAspectImageConfiguration == configuration;
+    final configurationUnchanged = _autoAspectImageConfiguration == configuration;
     if (providerUnchanged &&
         configurationUnchanged &&
         _autoAspectImageStream != null &&
@@ -342,8 +329,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
     );
   }
 
-  double get _containerVisualScaleTarget =>
-      _containerVisualScaleTargetNotifier.value;
+  double get _containerVisualScaleTarget => _containerVisualScaleTargetNotifier.value;
 
   bool get _isScaleGestureActive => _isScaleGestureActiveNotifier.value;
 
@@ -354,8 +340,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
   }
 
   void _setContainerVisualScaleTarget(double value) {
-    final clamped =
-        value.clamp(_minContainerVisualScale, _maxContainerVisualScale);
+    final clamped = value.clamp(_minContainerVisualScale, _maxContainerVisualScale);
     if ((_containerVisualScaleTargetNotifier.value - clamped).abs() > 0.0005) {
       _containerVisualScaleTargetNotifier.value = clamped;
     }
@@ -418,8 +403,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
             enableZoom: _isZoomEnabled,
             showLabels: _effectiveShowLabels,
             labelBehavior: _effectiveLabelBehavior,
-            reverseZoomEffectBorderRadius:
-                _effectiveReverseZoomEffectBorderRadius,
+            reverseZoomEffectBorderRadius: _effectiveReverseZoomEffectBorderRadius,
             overlayBuilder: widget.overlayOptions.builder,
             overlayStyle: widget.overlayOptions.style,
             zoomController: _zoomController,
@@ -432,8 +416,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
             onPointerCancel: _onPointerCancel,
             onPointerSignal: (event) => _onPointerSignal(event, sceneSize),
             onPointerPanZoomStart: _onPointerPanZoomStart,
-            onPointerPanZoomUpdate: (event) =>
-                _onPointerPanZoomUpdate(event, sceneSize),
+            onPointerPanZoomUpdate: (event) => _onPointerPanZoomUpdate(event, sceneSize),
             onPointerPanZoomEnd: _onPointerPanZoomEnd,
             child: scene,
           );
@@ -443,8 +426,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
                   animation: _cursorListenable,
                   child: pointerLayer,
                   builder: (context, child) {
-                    final canPanZoomedContent =
-                        _isZoomEnabled && _zoomController.effectiveZoom > 1.001;
+                    final canPanZoomedContent = _isZoomEnabled && _zoomController.effectiveZoom > 1.001;
                     final cursor = canPanZoomedContent
                         ? (_isPrimaryPointerDownNotifier.value
                             ? _effectiveZoomedDraggingCursor
@@ -462,12 +444,8 @@ class _BeforeAfterState extends State<BeforeAfter> {
             onScaleStart: _onScaleStart,
             onScaleUpdate: (details) => _onScaleUpdate(details, sceneSize),
             onScaleEnd: _onScaleEnd,
-            onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled
-                ? _onDoubleTapDown
-                : null,
-            onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled
-                ? () => _onDoubleTap(sceneSize)
-                : null,
+            onDoubleTapDown: _isZoomEnabled && _isDoubleTapZoomEnabled ? _onDoubleTapDown : null,
+            onDoubleTap: _isZoomEnabled && _isDoubleTapZoomEnabled ? () => _onDoubleTap(sceneSize) : null,
             child: sceneWithCursor,
           );
 
@@ -513,9 +491,7 @@ class _BeforeAfterState extends State<BeforeAfter> {
               builder: (context, visualScale, _) {
                 return buildSceneWithScale(
                   progress: progress,
-                  visualScale: _isScaleGestureActive
-                      ? _containerVisualScaleTarget
-                      : visualScale,
+                  visualScale: _isScaleGestureActive ? _containerVisualScaleTarget : visualScale,
                 );
               },
             );
